@@ -10,8 +10,9 @@ Committed milestones:
 - Wave 1 nutrition, onboarding/settings and NEVO pipeline: `f5047ac`.
 - Wave 2 read contracts: `deabe7e`.
 - Wave 2 integration and current Wave 3 foundations: `58897c6` (pushed to `origin/feature/app-build`).
+- Wave 3 reusable recipe and saved-meal workflows: `1035390` (pushed to `origin/feature/app-build`).
 
-The Wave 2 and initial Wave 3 work is checkpointed in `58897c6`. Preserve subsequent working-tree changes; do not reset, checkout, or discard them.
+The Wave 2 and reusable-food Wave 3 work is checkpointed through `1035390`. Preserve subsequent working-tree changes; do not reset, checkout, or discard them.
 
 ## What Was Added In This Pass
 
