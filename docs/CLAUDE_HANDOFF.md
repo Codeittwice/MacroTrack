@@ -44,6 +44,7 @@ The Wave 2 and current Wave 3 work is checkpointed through `358ebf7`. Preserve s
 - Wave 4 Progress now composes the existing live weight, intake, target, and expenditure queries into a range-controlled trend chart plus current trend weight, weekly rate, 28-day intake, adherence, expenditure confidence, and logged-day statistics.
 - Wave 4 Water is live under More. A daily total is persisted in the existing sync-ready table, supports quick additions and a manual total, and tracks progress against the Settings water goal.
 - Wave 4 Measurements are live under More. Waist, chest, and hips can be logged for a date, edited through one daily upsert record, and removed from active history.
+- Wave 4 Progress Photos are live under More. Local image blobs are validated, stored with date and pose metadata, displayed as private local previews, and require a deliberate second delete tap.
 
 The data APIs used by the UI already exist in `src/lib/log/actions.ts`, `src/lib/foods/foods.ts`, and `src/lib/food-sources/search.ts`. Keep these as the write/search ownership points rather than duplicating IndexedDB work in feature components.
 
@@ -75,7 +76,7 @@ The existing NEVO fetch-failure test emits an expected `network down` diagnostic
 3. Manually test the complete recipe and saved-meal save, edit, re-log, and delete flow in a browser, then add Playwright coverage once browser binaries are available.
 4. Validate the barcode camera flow on a physical Android device or browser with a real camera. Confirm permission denial, cancellation, success, and the offline cached-product path.
 5. Commit and push each completed Wave 3 checkpoint to `origin/feature/app-build`; do not include unrelated generated files.
-6. Build the remaining Wave 4 photos, reminders, and backup/import workflows. Keep each coherent slice checkpointed and pushed to `origin/feature/app-build`.
+6. Build the remaining Wave 4 reminders and backup/import workflows. Keep each coherent slice checkpointed and pushed to `origin/feature/app-build`.
 7. Add roughly thirty weighed Dutch meal/product fixtures plus `npm run eval:ai` coverage for raw and grounded calorie/protein error. Finish the AI security audit and validate one request per configured provider with a user-owned test key before calling the AI work complete.
 
 ## Intentional Deferrals
