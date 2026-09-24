@@ -14,6 +14,7 @@ const MODELS: Record<AiProviderId, string> = {
   openai: 'gpt-4.1-mini',
   gemini: 'gemini-2.5-flash',
 };
+const MAX_DESCRIPTION_LENGTH = 2_000;
 
 const OUTPUT_INSTRUCTIONS = `Return JSON only, with this shape: {"items":[{"name":string,"grams":number,"nutrients":{"kcal":number,"protein":number,"carbs":number,"fat":number},"confidence":number,"foodQuery":string?}]}. Identify each food separately. grams and nutrients describe the eaten portion. confidence is 0 to 1. Do not provide medical advice.`;
 
@@ -61,9 +62,9 @@ async function estimateOpenAi(apiKey: string, description: string, fetcher: Fetc
 }
 
 async function estimateGemini(apiKey: string, description: string, fetcher: Fetcher): Promise<AiMealEstimate> {
-  const response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+  const response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:generateContent`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt(description) }] }], generationConfig: { responseMimeType: 'application/json' } }),
   });
   await requireOk(response);
@@ -78,6 +79,7 @@ export async function estimateMeal(input: EstimateMealInput, fetcher: Fetcher = 
   const description = input.description.trim();
   const apiKey = input.apiKey.trim();
   if (!description) throw new Error('Describe the meal before estimating it.');
+  if (description.length > MAX_DESCRIPTION_LENGTH) throw new Error('Keep the meal description under 2,000 characters.');
   if (!apiKey) throw new Error('Add an API key for the selected provider in Settings.');
   if (input.provider === 'claude') return estimateClaude(apiKey, description, fetcher);
   if (input.provider === 'openai') return estimateOpenAi(apiKey, description, fetcher);

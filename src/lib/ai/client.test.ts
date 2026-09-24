@@ -16,6 +16,10 @@ describe('estimateMeal', () => {
     const gemini = vi.fn(async () => response({ candidates: [{ content: { parts: [{ text: JSON.stringify(ESTIMATE) }] } }] }));
     await expect(estimateMeal({ provider: 'openai', apiKey: 'key', description: 'Yoghurt' }, openAi)).resolves.toEqual(ESTIMATE);
     await expect(estimateMeal({ provider: 'gemini', apiKey: 'key', description: 'Yoghurt' }, gemini)).resolves.toEqual(ESTIMATE);
+    expect(gemini).toHaveBeenCalledWith(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      expect.objectContaining({ headers: expect.objectContaining({ 'x-goog-api-key': 'key' }) }),
+    );
     await expect(estimateMeal({ provider: 'openai', apiKey: 'key', description: 'Yoghurt' }, async () => response({ choices: [{ message: { content: '{}' } }] }))).rejects.toThrow('valid meal estimate');
   });
 
@@ -23,5 +27,6 @@ describe('estimateMeal', () => {
     await expect(estimateMeal({ provider: 'claude', apiKey: '', description: 'Lunch' })).rejects.toThrow('Add an API key');
     await expect(estimateMeal({ provider: 'claude', apiKey: 'private-key', description: '' })).rejects.toThrow('Describe the meal');
     await expect(estimateMeal({ provider: 'claude', apiKey: 'private-key', description: 'Lunch' }, async () => response({}, 401))).rejects.not.toThrow('private-key');
+    await expect(estimateMeal({ provider: 'claude', apiKey: 'key', description: 'x'.repeat(2_001) })).rejects.toThrow('under 2,000');
   });
 });

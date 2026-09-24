@@ -85,6 +85,8 @@ Waves run in sequence; workstreams within a wave have disjoint file ownership. T
 - Wave 1 is complete (`f5047ac`) and its maths audit issues were fixed with regressions.
 - Wave 2 and Wave 3 feature work are integrated and checkpointed on `feature/app-build` through the AI review flow (`358ebf7`).
 - Wave 4 is complete on the current branch: weekly coach approval, progress statistics, water, measurements, local progress photos, guarded JSON backup/restore, and an in-app water reminder.
+- The Wave 3 AI follow-up is complete on the current branch: a 30-scenario offline regression corpus reports raw and grounded calorie/protein error via `npm run eval:ai`, and the provider-key audit is recorded in `docs/AI_SECURITY_AUDIT.md`.
+- Wave 5 Android web-asset sync passes with `npm run cap:sync`; an APK/emulator validation still needs a host with Java, Android SDK, and an emulator available.
 - Android Studio/emulator setup and the licensed NEVO source CSV remain external prerequisites.
 
 ## Verification Checklist
