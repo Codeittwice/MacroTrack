@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('onboards a new user and logs a quick meal', async ({ page }) => {
+test('onboards a new user, logs a quick meal, and updates the dashboard', async ({ page }) => {
   await page.goto('/onboarding');
   await page.getByRole('button', { name: 'Get started' }).click();
 
@@ -40,4 +40,7 @@ test('onboards a new user and logs a quick meal', async ({ page }) => {
 
   await expect(page.getByRole('button', { name: 'Edit Quick add' }).first()).toBeVisible();
   await expect(page.getByText('400 kcal').first()).toBeVisible();
+
+  await page.getByRole('link', { name: 'Dashboard' }).click();
+  await expect(page.getByRole('button', { name: /400 of .* kcal consumed/ })).toBeVisible();
 });
