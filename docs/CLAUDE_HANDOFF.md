@@ -42,6 +42,7 @@ The Wave 2 and current Wave 3 work is checkpointed through `358ebf7`. Preserve s
 - `src/lib/ai/client.ts` now sends a meal description only to the selected configured provider (Claude, OpenAI, or Gemini), parses its provider-specific response envelope, and validates the result before grounding. It neither logs API keys nor includes them in user-facing errors. The Add Food `Describe meal` tab lets users adjust or remove each reviewed item before explicitly adding it to the log.
 - Wave 4 Coach is now live. `src/lib/coach/actions.ts` derives a weekly proposal from local weight and intake history, records an accepted or declined review, and atomically applies a same-day coached target only after acceptance. The Coach page presents confidence, trend weight, weekly rate, expenditure, targets, and recent decisions.
 - Wave 4 Progress now composes the existing live weight, intake, target, and expenditure queries into a range-controlled trend chart plus current trend weight, weekly rate, 28-day intake, adherence, expenditure confidence, and logged-day statistics.
+- Wave 4 Water is live under More. A daily total is persisted in the existing sync-ready table, supports quick additions and a manual total, and tracks progress against the Settings water goal.
 
 The data APIs used by the UI already exist in `src/lib/log/actions.ts`, `src/lib/foods/foods.ts`, and `src/lib/food-sources/search.ts`. Keep these as the write/search ownership points rather than duplicating IndexedDB work in feature components.
 
@@ -51,7 +52,7 @@ Completed after the integration changes:
 
 ```text
 npm run build  # passed; Vite PWA bundle produced
-npm test       # passed; 27 files, 253 tests
+npm test       # passed; 28 files, 255 tests
 ```
 
 Manual mobile smoke check at `http://127.0.0.1:5173`:
@@ -73,7 +74,7 @@ The existing NEVO fetch-failure test emits an expected `network down` diagnostic
 3. Manually test the complete recipe and saved-meal save, edit, re-log, and delete flow in a browser, then add Playwright coverage once browser binaries are available.
 4. Validate the barcode camera flow on a physical Android device or browser with a real camera. Confirm permission denial, cancellation, success, and the offline cached-product path.
 5. Commit and push each completed Wave 3 checkpoint to `origin/feature/app-build`; do not include unrelated generated files.
-6. Build the Wave 4 Progress dashboard, measurements, water logging, photos, reminders, and backup/import flow. Keep each coherent slice checkpointed and pushed to `origin/feature/app-build`.
+6. Build the remaining Wave 4 measurements, photos, reminders, and backup/import workflows. Keep each coherent slice checkpointed and pushed to `origin/feature/app-build`.
 7. Add roughly thirty weighed Dutch meal/product fixtures plus `npm run eval:ai` coverage for raw and grounded calorie/protein error. Finish the AI security audit and validate one request per configured provider with a user-owned test key before calling the AI work complete.
 
 ## Intentional Deferrals
