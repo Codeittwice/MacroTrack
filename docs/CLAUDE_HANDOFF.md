@@ -50,6 +50,7 @@ The Wave 2 and current Wave 3 work is checkpointed through `358ebf7`. Preserve s
 - Wave 4 Reminders are complete. Settings now persist an opt-in water reminder time, and the Dashboard gives an actionable daily water prompt after that time while the user remains below the configured goal.
 - The AI evaluation and security follow-up is complete. `npm run eval:ai` evaluates a 30-fixture offline Dutch meal/product corpus and enforces grounded calorie/protein MAPE improvement. The audit in `docs/AI_SECURITY_AUDIT.md` records the client-side risk boundary; Gemini keys now use the documented authentication header rather than a URL query parameter.
 - Playwright now covers the primary first-run path in both desktop Chromium and Pixel 7 emulation: complete onboarding, open Food Log, quick-log a meal, and confirm its visible total. Onboarding activity, goal, and diet choices are semantic buttons with pressed state rather than clickable cards.
+- The nutrition audit now has a direct shrinkage regression: at the 10-day evidence threshold the expenditure estimate is pulled toward its prior, and at 15 days it moves predictably closer to the same raw signal.
 
 The data APIs used by the UI already exist in `src/lib/log/actions.ts`, `src/lib/foods/foods.ts`, and `src/lib/food-sources/search.ts`. Keep these as the write/search ownership points rather than duplicating IndexedDB work in feature components.
 
@@ -59,7 +60,7 @@ Completed after the integration changes:
 
 ```text
 npm run build  # passed; Vite PWA bundle produced
-npm test       # passed; 33 files, 265 tests
+npm test       # passed; 33 files, 266 tests
 npm run cap:sync # passed; production PWA copied into Capacitor Android project
 npm run eval:ai # passed; grounded MAPE improves calories 28.1% -> 4.7%, protein 38.1% -> 5.3%
 npm run e2e     # passed; desktop Chromium and Pixel 7 onboarding/quick-log smoke tests
@@ -94,7 +95,7 @@ The existing NEVO fetch-failure test emits an expected `network down` diagnostic
 - Recipe and Saved Meal creation, editing, deletion, and re-logging are implemented.
 - Photo estimation is not yet implemented. The offline fixture evaluation and client-side security audit are complete; provider transports still require user-owned-key validation.
 - Capacitor/Tauri packaging and sync remain later waves. Wave 4 coach, progress statistics, extras, backup/import, and the in-app water reminder are implemented.
-- Existing audit items remain: expenditure shrinkage needs explicit test coverage, and outlier handling is not yet implemented.
+- Existing audit item: outlier handling is not yet implemented.
 
 ## Suggested Message To Claude
 

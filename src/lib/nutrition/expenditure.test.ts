@@ -127,6 +127,26 @@ describe('estimateExpenditure edge cases', () => {
     expect(result.expenditure).toBeLessThanOrEqual(2100);
   });
 
+  it('shrinks sparse eligible data toward the prior and trusts more data progressively', () => {
+    const makeInput = (days: number) => {
+      const trend = Array.from({ length: days }, (_, index) => ({
+        date: `2024-01-${String(index + 1).padStart(2, '0')}`,
+        value: 80 + index * 0.1,
+      }));
+      const intake = trend.map(({ date }) => ({ date, kcal: 3000 }));
+      return { intake, trend, prior: 3000 };
+    };
+
+    // The raw signal is 3,000 - (0.1 kg/day * 7,700) = 2,230 kcal.
+    const tenDays = estimateExpenditure(makeInput(10));
+    const fifteenDays = estimateExpenditure(makeInput(15));
+    expect(tenDays).toMatchObject({ expenditure: 2487, daysUsed: 10, confidence: 'medium' });
+    expect(fifteenDays).toMatchObject({ expenditure: 2422, daysUsed: 15, confidence: 'medium' });
+    expect(fifteenDays.expenditure).toBeLessThan(tenDays.expenditure);
+    expect(tenDays.expenditure).toBeGreaterThan(2230);
+    expect(fifteenDays.expenditure).toBeGreaterThan(2230);
+  });
+
   it('expenditureSeries never changes by more than ~100/7 kcal between consecutive days', () => {
     const sim = simulate({
       trueTdee: 2600,
