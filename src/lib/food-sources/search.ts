@@ -120,3 +120,20 @@ export async function getFoodById(id: string): Promise<FoodItem | undefined> {
     return undefined;
   }
 }
+
+/**
+ * Resolve a scanned EAN/UPC through every registered source that supports barcode lookup.
+ * Separators are ignored so a manually entered code behaves the same as a camera result.
+ */
+export async function getFoodByBarcode(rawBarcode: string): Promise<FoodItem | undefined> {
+  ensureDefaults();
+  const barcode = rawBarcode.replace(/[\s-]/g, '');
+  if (!/^\d{8,14}$/.test(barcode)) return undefined;
+
+  const sources = [...registry.values()].filter((source): source is FoodSource & Required<Pick<FoodSource, 'getByBarcode'>> => !!source.getByBarcode);
+  const results = await Promise.allSettled(sources.map((source) => source.getByBarcode(barcode)));
+  for (const result of results) {
+    if (result.status === 'fulfilled' && result.value) return result.value;
+  }
+  return undefined;
+}

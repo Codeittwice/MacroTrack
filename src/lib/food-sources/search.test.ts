@@ -3,7 +3,7 @@ import { db } from '@/db/schema';
 import type { StoredFood, Recipe, FoodSource, FoodItem } from '@/db/types';
 import { __setNevoDataForTest, type NevoRow } from './nevo';
 import { recipeToFoodItem } from './user';
-import { searchFoods, getFoodById, registerFoodSource, unregisterFoodSource } from './search';
+import { searchFoods, getFoodByBarcode, getFoodById, registerFoodSource, unregisterFoodSource } from './search';
 
 const ROWS: NevoRow[] = [
   [1001, 'Brood Turks', 'Bread Turkish', 'Turks brood', 'Brood', 'g', 270, 9.1, 50.2, 3.4, 2.5, 2.1, 0.6, 480, null],
@@ -100,6 +100,19 @@ describe('searchFoods', () => {
 
     const byId = await getFoodById('off:999');
     expect(byId?.name).toBe('Pindakaas Extra');
+  });
+
+  it('normalizes a barcode and ignores unavailable barcode sources', async () => {
+    const fakeOff: FoodSource = {
+      id: 'off',
+      search: async () => [],
+      getByBarcode: async (barcode) => barcode === '8712345678901'
+        ? { id: 'off:8712345678901', source: 'off', name: 'Scanned food', barcode, per100: { kcal: 100, protein: 10, carbs: 5, fat: 2 }, servings: [] }
+        : undefined,
+    };
+    registerFoodSource(fakeOff);
+    await expect(getFoodByBarcode('8712 345-678901')).resolves.toMatchObject({ name: 'Scanned food' });
+    await expect(getFoodByBarcode('not-a-barcode')).resolves.toBeUndefined();
   });
 });
 

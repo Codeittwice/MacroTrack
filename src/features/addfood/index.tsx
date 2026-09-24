@@ -14,13 +14,15 @@ import { scale } from '@/lib/utils/nutrients';
 import { logSavedMeal } from '@/lib/recipes/actions';
 import { fmtG, fmtKcal } from './format';
 import { useAddFoodTabs } from './registry';
+import { BarcodeTab } from './BarcodeTab';
 
-type BuiltInTab = 'search' | 'library' | 'quick' | 'new';
+type BuiltInTab = 'search' | 'library' | 'barcode' | 'quick' | 'new';
 type SheetTab = BuiltInTab | string;
 
 const BUILT_IN_TABS: { id: BuiltInTab; label: string }[] = [
   { id: 'search', label: 'Search' },
   { id: 'library', label: 'Library' },
+  { id: 'barcode', label: 'Barcode' },
   { id: 'quick', label: 'Quick add' },
   { id: 'new', label: 'New food' },
 ];
@@ -349,6 +351,7 @@ export function AddFoodSheet({ open, onClose, date, meal, initialTab }: {
       <Segmented options={availableTabs.map((candidate) => ({ value: candidate.id, label: candidate.label }))} value={tab} onChange={setTab} className="mb-4 overflow-x-auto" />
       {tab === 'search' && <SearchTab onSelect={setSelectedFood} />}
       {tab === 'library' && <LibraryTab date={date} meal={meal} onLogged={logged} onSelect={setSelectedFood} />}
+      {tab === 'barcode' && <BarcodeTab onSelect={setSelectedFood} />}
       {tab === 'quick' && <QuickAddTab date={date} meal={meal} onLogged={logged} />}
       {tab === 'new' && <NewFoodTab onSelect={setSelectedFood} />}
       {extensions.filter((candidate) => candidate.id === tab).map((candidate) => <div key={candidate.id}>{candidate.render({ date, meal, onLogged: logged, openFood: setSelectedFood })}</div>)}
