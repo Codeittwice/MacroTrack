@@ -38,6 +38,7 @@ The Wave 2 and current Wave 3 work is checkpointed through `c297e4a`. Preserve s
 - `getFoodByBarcode` normalizes scanned or typed EAN/UPC values and asks every barcode-capable source. It has coverage for valid input, invalid input, source fallback, and manual separators.
 - Add Food now includes a Barcode tab. It supports typed/pasted codes and an explicit `Start camera` action backed by `@zxing/browser`; a successful lookup opens the existing amount-and-log flow. Android declares `CAMERA`, but the runtime prompt occurs only after the user starts a scan.
 - `src/lib/ai/grounding.ts` establishes the safe AI boundary: Zod validates each provider estimate before use, strong NEVO/OFF name matches replace only the nutrition basis, and uncertain or offline items remain explicitly sourced as AI estimates. Regression tests cover grounding, fallback, offline operation, and malformed output rejection.
+- `src/lib/ai/client.ts` now sends a meal description only to the selected configured provider (Claude, OpenAI, or Gemini), parses its provider-specific response envelope, and validates the result before grounding. It neither logs API keys nor includes them in user-facing errors. The Add Food `Describe meal` tab lets users adjust or remove each reviewed item before explicitly adding it to the log.
 
 The data APIs used by the UI already exist in `src/lib/log/actions.ts`, `src/lib/foods/foods.ts`, and `src/lib/food-sources/search.ts`. Keep these as the write/search ownership points rather than duplicating IndexedDB work in feature components.
 
@@ -47,7 +48,7 @@ Completed after the integration changes:
 
 ```text
 npm run build  # passed; Vite PWA bundle produced
-npm test       # passed; 25 files, 247 tests
+npm test       # passed; 26 files, 251 tests
 ```
 
 Manual mobile smoke check at `http://127.0.0.1:5173`:
@@ -69,17 +70,17 @@ The existing NEVO fetch-failure test emits an expected `network down` diagnostic
 3. Manually test the complete recipe and saved-meal save, edit, re-log, and delete flow in a browser, then add Playwright coverage once browser binaries are available.
 4. Validate the barcode camera flow on a physical Android device or browser with a real camera. Confirm permission denial, cancellation, success, and the offline cached-product path.
 5. Commit and push each completed Wave 3 checkpoint to `origin/feature/app-build`; do not include unrelated generated files.
-6. Add provider transports and an Add Food review UI on top of `src/lib/ai/grounding.ts`. Do not log API keys, use only the chosen local key, and add fixture-driven evaluation plus a security audit before calling the AI work complete.
+6. Add roughly thirty weighed Dutch meal/product fixtures plus `npm run eval:ai` coverage for raw and grounded calorie/protein error. Finish the AI security audit and validate one request per configured provider with a user-owned test key before calling the AI work complete.
 
 ## Intentional Deferrals
 
-- `Describe meal` currently opens Add Food with `?tab=ai`; it falls back to Search until the AI review tab and provider transports are registered. No provider request is made yet.
+- `Describe meal` opens the Add Food review flow. The selected provider is called only after the user enters a description and has a local key configured in Settings.
 - Open Food Facts search, barcode lookup, and camera scanning UI are implemented. Hardware permission, cancellation, and real-product checks still need a physical-device validation.
 - Recipe and Saved Meal creation, editing, deletion, and re-logging are implemented.
-- Photo estimation, provider transports, and AI review/logging UI are not yet implemented. AI estimate validation and local-food grounding are ready for those layers.
+- Photo estimation and fixture-driven AI evaluation are not yet implemented. Provider transports, validation, grounding, and review-before-logging are implemented but still require user-owned-key and security-audit validation.
 - Adaptive coach, progress statistics, extras, Tauri packaging, and sync remain later waves.
 - Existing audit items remain: onboarding activity/diet cards need better button semantics, expenditure shrinkage needs explicit test coverage, and outlier handling is not yet implemented.
 
 ## Suggested Message To Claude
 
-> Please continue MacroTrack from the latest pushed checkpoint on `feature/app-build`. Read `docs/PLAN.md` and `docs/CLAUDE_HANDOFF.md` first. Wave 2's custom-food-to-dashboard flow is verified. Wave 3 has an Open Food Facts Netherlands adapter with Dexie caching, barcode lookup and opt-in camera scanning, plus working recipe and saved-meal creation, management, and re-logging. AI validation and local-food grounding are tested in `src/lib/ai/grounding.ts`; next, add provider transports and the review UI, then fixture evaluation and a security audit. NEVO source data, Playwright browser binaries, and physical camera validation are still external prerequisites.
+> Please continue MacroTrack from the latest pushed checkpoint on `feature/app-build`. Read `docs/PLAN.md` and `docs/CLAUDE_HANDOFF.md` first. Wave 2's custom-food-to-dashboard flow is verified. Wave 3 has an Open Food Facts Netherlands adapter with Dexie caching, barcode lookup and opt-in camera scanning, plus working recipe and saved-meal creation, management, and re-logging. `Describe meal` has provider transports, Zod validation, local-food grounding, and review-before-logging. Build the weighed-fixture evaluation script and complete the AI security audit next. NEVO source data, Playwright browser binaries, user-owned provider-key testing, and physical camera validation are still external prerequisites.

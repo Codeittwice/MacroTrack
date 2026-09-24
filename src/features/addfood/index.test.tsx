@@ -63,6 +63,14 @@ describe('AddFoodSheet', () => {
     expect(entry).toMatchObject({ source: 'quick', meal: 1, grams: 100 });
     expect(entry.nutrients).toMatchObject({ kcal: 250, protein: 20, carbs: 30, fat: 8 });
   });
+
+  it('opens the describe-meal tab and requires the selected provider key', async () => {
+    render(<AddFoodSheet open onClose={vi.fn()} date={DATE} meal={0} initialTab="ai" />);
+
+    expect(screen.getByLabelText('Meal description')).toBeTruthy();
+    expect(screen.getByText('Add a Claude API key in Settings to estimate meals.')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Estimate meal' }) as HTMLButtonElement).disabled).toBe(true);
+  });
 });
 
 describe('FoodDetailSheet', () => {
