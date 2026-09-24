@@ -1,5 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
-import { Card, cx, Label, NumberInput } from '@/components/ui';
+import { cx, Label, NumberInput } from '@/components/ui';
 import { GAIN_RATE_PRESETS, GOAL_OPTIONS, LOSE_RATE_PRESETS } from '../options';
 import type { WizardData } from '../wizardState';
 import { goalWeightErrorMsg } from '../validation';
@@ -36,16 +36,18 @@ export default function Goal({ data, onChange }: { data: WizardData; onChange: (
         {GOAL_OPTIONS.map((o) => {
           const selected = goal === o.value;
           return (
-            <Card
+            <button
+              type="button"
               key={o.value}
               onClick={() => selectGoal(o.value)}
+              aria-pressed={selected}
               className={cx(
-                'min-h-[48px] items-center justify-center border text-center text-sm font-medium transition',
+                'min-h-[48px] rounded-2xl border bg-surface p-4 text-center text-sm font-medium transition',
                 selected ? 'border-primary bg-primary/10' : 'border-border hover:border-muted',
               )}
             >
               {o.label}
-            </Card>
+            </button>
           );
         })}
       </div>

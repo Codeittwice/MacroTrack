@@ -49,6 +49,7 @@ The Wave 2 and current Wave 3 work is checkpointed through `358ebf7`. Preserve s
 - Wave 4 Backup is complete. Export produces a versioned JSON backup of tracker records; import validates that shape, requires a second explicit restore action, replaces the portable data atomically, and retains local AI API keys. Photos intentionally remain local and are called out in the export UI.
 - Wave 4 Reminders are complete. Settings now persist an opt-in water reminder time, and the Dashboard gives an actionable daily water prompt after that time while the user remains below the configured goal.
 - The AI evaluation and security follow-up is complete. `npm run eval:ai` evaluates a 30-fixture offline Dutch meal/product corpus and enforces grounded calorie/protein MAPE improvement. The audit in `docs/AI_SECURITY_AUDIT.md` records the client-side risk boundary; Gemini keys now use the documented authentication header rather than a URL query parameter.
+- Playwright now covers the primary first-run path in both desktop Chromium and Pixel 7 emulation: complete onboarding, open Food Log, quick-log a meal, and confirm its visible total. Onboarding activity, goal, and diet choices are semantic buttons with pressed state rather than clickable cards.
 
 The data APIs used by the UI already exist in `src/lib/log/actions.ts`, `src/lib/foods/foods.ts`, and `src/lib/food-sources/search.ts`. Keep these as the write/search ownership points rather than duplicating IndexedDB work in feature components.
 
@@ -61,6 +62,7 @@ npm run build  # passed; Vite PWA bundle produced
 npm test       # passed; 33 files, 265 tests
 npm run cap:sync # passed; production PWA copied into Capacitor Android project
 npm run eval:ai # passed; grounded MAPE improves calories 28.1% -> 4.7%, protein 38.1% -> 5.3%
+npm run e2e     # passed; desktop Chromium and Pixel 7 onboarding/quick-log smoke tests
 ```
 
 Manual mobile smoke check at `http://127.0.0.1:5173`:
@@ -78,23 +80,22 @@ The existing NEVO fetch-failure test emits an expected `network down` diagnostic
 ## Known Gaps And Recommended Order
 
 1. Add the RIVM-licensed NEVO source CSV under `data/raw/` and run `npm run nevo`. Until then Search correctly renders an empty result state because there is no bundled catalogue data.
-2. Install Playwright browsers and add a mobile smoke test for onboarding, food logging, dashboard totals, and entry editing. The package is present but browser binaries were not installed during this pass.
-3. Manually test the complete recipe and saved-meal save, edit, re-log, and delete flow in a browser, then add Playwright coverage once browser binaries are available.
+2. Extend Playwright coverage to entry editing, dashboard totals, recipes/saved meals, and backup/import. Chromium is installed on this host and the baseline desktop/mobile smoke test passes.
+3. Manually test the complete recipe and saved-meal save, edit, re-log, and delete flow in a browser, then add Playwright coverage for it.
 4. Validate the barcode camera flow on a physical Android device or browser with a real camera. Confirm permission denial, cancellation, success, and the offline cached-product path.
-5. Commit and push each completed Wave 3 checkpoint to `origin/feature/app-build`; do not include unrelated generated files.
-6. Validate one request per configured provider with a user-owned test key before calling the AI work complete.
-7. Configure Java/Android SDK and an emulator to run `npm run android:apk` and install the result. The current host has no `JAVA_HOME` or `java` command available, although `npm run cap:sync` passes.
-8. Add a native scheduled-notification adapter during Wave 5 if closed-app water notifications are required; the current Wave 4 reminder is deliberately an in-app dashboard prompt.
+5. Validate one request per configured provider with a user-owned test key before calling the AI work complete.
+6. Configure Java/Android SDK and an emulator to run `npm run android:apk` and install the result. The current host has no `JAVA_HOME` or `java` command available, although `npm run cap:sync` passes.
+7. Add a native scheduled-notification adapter during Wave 5 if closed-app water notifications are required; the current Wave 4 reminder is deliberately an in-app dashboard prompt.
 
 ## Intentional Deferrals
 
 - `Describe meal` opens the Add Food review flow. The selected provider is called only after the user enters a description and has a local key configured in Settings.
 - Open Food Facts search, barcode lookup, and camera scanning UI are implemented. Hardware permission, cancellation, and real-product checks still need a physical-device validation.
 - Recipe and Saved Meal creation, editing, deletion, and re-logging are implemented.
-- Photo estimation and fixture-driven AI evaluation are not yet implemented. Provider transports, validation, grounding, and review-before-logging are implemented but still require user-owned-key and security-audit validation.
+- Photo estimation is not yet implemented. The offline fixture evaluation and client-side security audit are complete; provider transports still require user-owned-key validation.
 - Capacitor/Tauri packaging and sync remain later waves. Wave 4 coach, progress statistics, extras, backup/import, and the in-app water reminder are implemented.
-- Existing audit items remain: onboarding activity/diet cards need better button semantics, expenditure shrinkage needs explicit test coverage, and outlier handling is not yet implemented.
+- Existing audit items remain: expenditure shrinkage needs explicit test coverage, and outlier handling is not yet implemented.
 
 ## Suggested Message To Claude
 
-> Please continue MacroTrack from the latest pushed checkpoint on `feature/app-build`. Wave 4 is complete: coach approval, progress statistics, water, measurements, local photos, versioned JSON backup/restore, and an in-app water reminder are all implemented. Wave 3 has Open Food Facts Netherlands search/cache, barcode lookup and opt-in camera scanning, recipe/saved-meal workflows, `Describe meal` provider transports with validation, grounding, review-before-logging, a 30-fixture offline evaluation command, and a documented security audit. The next meaningful work is Wave 5 packaging after Java/Android SDK and Rust/Tauri tooling are installed. NEVO source data, Playwright browser binaries, user-owned provider-key testing, physical camera validation, and platform tooling remain external prerequisites.
+> Please continue MacroTrack from the latest pushed checkpoint on `feature/app-build`. Wave 4 is complete: coach approval, progress statistics, water, measurements, local photos, versioned JSON backup/restore, and an in-app water reminder are all implemented. Wave 3 has Open Food Facts Netherlands search/cache, barcode lookup and opt-in camera scanning, recipe/saved-meal workflows, `Describe meal` provider transports with validation, grounding, review-before-logging, a 30-fixture offline evaluation command, and a documented security audit. The desktop and Pixel 7 Playwright onboarding/quick-log smoke test passes. The next meaningful work is Wave 5 packaging after Java/Android SDK and Rust/Tauri tooling are installed. NEVO source data, user-owned provider-key testing, physical camera validation, and platform tooling remain external prerequisites.
