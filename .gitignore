@@ -1,0 +1,14 @@
+node_modules
+dist
+dev-dist
+.env
+.env.local
+*.log
+coverage
+playwright-report
+test-results
+android/app/build
+android/.gradle
+android/local.properties
+src-tauri/target
+.army-state.md

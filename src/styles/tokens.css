@@ -1,0 +1,38 @@
+/* Theme tokens. Dark ("Fresh Dark") is the default; light via [data-theme="light"]. */
+:root {
+  --bg: #0F1115;
+  --surface: #171A21;
+  --surface-2: #20242D;
+  --border: #2A2F3A;
+  --text: #E8EAED;
+  --muted: #9AA0AA;
+  --primary: #4ADE80;
+  --on-primary: #0F1115;
+  --protein: #F87171;
+  --carbs: #60A5FA;
+  --fat: #FBBF24;
+  --kcal: #A78BFA;
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  color-scheme: dark;
+}
+:root[data-theme='light'] {
+  --bg: #F7F8FA;
+  --surface: #FFFFFF;
+  --surface-2: #F1F3F6;
+  --border: #E5E7EB;
+  --text: #111827;
+  --muted: #6B7280;
+  --primary: #16A34A;
+  --on-primary: #FFFFFF;
+  --protein: #DC2626;
+  --carbs: #2563EB;
+  --fat: #D97706;
+  --kcal: #7C3AED;
+  color-scheme: light;
+}
+:root[data-accent='ocean'] { --primary: #38BDF8; }
+:root[data-accent='sunset'] { --primary: #FB923C; }
+:root[data-theme='light'][data-accent='ocean'] { --primary: #0284C7; }
+:root[data-theme='light'][data-accent='sunset'] { --primary: #EA580C; }

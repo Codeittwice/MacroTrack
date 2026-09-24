@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MacroTrack</string>
+    <string name="title_activity_main">MacroTrack</string>
+    <string name="package_name">nl.macrotrack.app</string>
+    <string name="custom_url_scheme">nl.macrotrack.app</string>
+</resources>
