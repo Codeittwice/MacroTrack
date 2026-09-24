@@ -14,7 +14,7 @@ Committed milestones:
 - Wave 3 barcode lookup and opt-in scanner: `b7df528` (pushed to `origin/feature/app-build`).
 - Wave 3 validated AI estimate grounding: `c297e4a` (pushed to `origin/feature/app-build`).
 - Wave 3 provider transport and estimate review: `358ebf7` (pushed to `origin/feature/app-build`).
-- Wave 4 coach, progress, water, measurement, and photo checkpoints are pushed through `022af17`.
+- Wave 4 is complete: coach, progress, water, measurements, photos, backup/restore, and reminders are in `ad80961` (pushed to `origin/feature/app-build`).
 
 The Wave 2 and current Wave 3 work is checkpointed through `358ebf7`. Preserve subsequent working-tree changes; do not reset, checkout, or discard them.
 
