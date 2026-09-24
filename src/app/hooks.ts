@@ -16,7 +16,9 @@ export function useProfile(): Profile | null | undefined {
 
 /** Target set in effect on a date (latest effectiveFrom <= date). */
 export async function getTargetSetFor(date: DateKey): Promise<TargetSet | undefined> {
-  const sets = (await db.targets.where('effectiveFrom').belowOrEqual(date).sortBy('effectiveFrom')).filter(alive);
+  const sets = (await db.targets.where('effectiveFrom').belowOrEqual(date).toArray())
+    .filter(alive)
+    .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom) || a.updatedAt - b.updatedAt);
   return sets[sets.length - 1];
 }
 

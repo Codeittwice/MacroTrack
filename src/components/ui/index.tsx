@@ -4,7 +4,7 @@
  */
 import clsx from 'clsx';
 import { X } from 'lucide-react';
-import { useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
 
 export { clsx as cx };
 
@@ -56,14 +56,23 @@ export function NumberInput({
 }: Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'> & {
   value: number | undefined; onValue: (v: number | undefined) => void; suffix?: string;
 }) {
+  // Keep the raw text so partial input like "80." or "0," survives while typing.
+  const [text, setText] = useState(value === undefined ? '' : String(value));
+  useEffect(() => {
+    const parsed = Number(text.replace(',', '.'));
+    if (value === undefined ? text !== '' : parsed !== value) setText(value === undefined ? '' : String(value));
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps -- only resync on external value changes
   return (
     <div className={clsx('relative', className)}>
       <Input
         inputMode="decimal"
-        value={value ?? ''}
+        value={text}
         onChange={(e) => {
-          const s = e.target.value.replace(',', '.');
-          if (s === '') return onValue(undefined);
+          const raw = e.target.value;
+          if (!/^-?\d*[.,]?\d*$/.test(raw)) return;
+          setText(raw);
+          const s = raw.replace(',', '.');
+          if (s === '' || s === '-' || s === '.') return onValue(undefined);
           const n = Number(s);
           if (!Number.isNaN(n)) onValue(n);
         }}

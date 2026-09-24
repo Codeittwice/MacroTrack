@@ -1,0 +1,14 @@
+/*
+ * Accent swatch fills for the Appearance section's picker. Theme vars only: each swatch reads a
+ * dedicated --swatch-* token if the theme defines one (flagged to Commander for tokens.css), and
+ * otherwise falls back to the closest existing theme token.
+ */
+.swatch-green {
+  background: var(--swatch-green, var(--success));
+}
+.swatch-ocean {
+  background: var(--swatch-ocean, var(--carbs));
+}
+.swatch-sunset {
+  background: var(--swatch-sunset, var(--fat));
+}

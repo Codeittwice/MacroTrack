@@ -1,50 +1,109 @@
 import type { DateKey } from '@/db/types';
 import { addDays, daysBetween } from '@/lib/utils/date';
-import type { DailyPoint } from './index';
+import type { DailyPoint } from './types';
 
-/** Baseline (Wave 0). W1 hardens + tests. */
-export function trendWeight(weights: { date: DateKey; kg: number }[], alpha = 0.1): DailyPoint[] {
-  if (weights.length === 0) return [];
-  const byDay = new Map<DateKey, number[]>();
+/**
+ * Groups raw weigh-ins by calendar date, averaging multiple entries on the same day.
+ * Non-finite dates/values and non-positive kg are dropped. Returns dates sorted ascending.
+ */
+export function dailyAverages(weights: { date: DateKey; kg: number }[]): { date: DateKey; kg: number }[] {
+  const byDay = new Map<DateKey, { sum: number; n: number }>();
   for (const w of weights) {
-    const arr = byDay.get(w.date) ?? [];
-    arr.push(w.kg);
-    byDay.set(w.date, arr);
+    if (!w || typeof w.date !== 'string' || !Number.isFinite(w.kg) || w.kg <= 0) continue;
+    const entry = byDay.get(w.date);
+    if (entry) {
+      entry.sum += w.kg;
+      entry.n += 1;
+    } else {
+      byDay.set(w.date, { sum: w.kg, n: 1 });
+    }
   }
   const days = [...byDay.keys()].sort();
-  const avg = (d: DateKey) => {
-    const a = byDay.get(d)!;
-    return a.reduce((s, v) => s + v, 0) / a.length;
-  };
-  const first = days[0];
-  const last = days[days.length - 1];
-  const out: DailyPoint[] = [];
-  let trend = avg(first);
-  let prevKnown = { date: first, kg: trend };
-  let nextIdx = 1;
+  return days.map((date) => {
+    const { sum, n } = byDay.get(date)!;
+    return { date, kg: sum / n };
+  });
+}
+
+/**
+ * Linearly interpolates a sparse, sorted series of known daily averages into one value per
+ * calendar day from the first to the last date (inclusive). O(n + days): a moving index tracks
+ * the next known day instead of re-scanning the array per day.
+ */
+export function interpolateDaily(known: { date: DateKey; kg: number }[]): { date: DateKey; kg: number }[] {
+  if (known.length === 0) return [];
+  const first = known[0].date;
+  const last = known[known.length - 1].date;
+  const out: { date: DateKey; kg: number }[] = [];
+  let idx = 0; // index of the known point at or after the current day
   for (let d = first; d <= last; d = addDays(d, 1)) {
-    let raw: number;
-    if (byDay.has(d)) {
-      raw = avg(d);
-      prevKnown = { date: d, kg: raw };
-      nextIdx = days.indexOf(d) + 1;
+    while (idx < known.length - 1 && known[idx].date < d) idx++;
+    if (known[idx].date === d) {
+      out.push({ date: d, kg: known[idx].kg });
     } else {
-      const next = days[nextIdx];
-      const span = daysBetween(prevKnown.date, next);
-      const t = daysBetween(prevKnown.date, d) / span;
-      raw = prevKnown.kg + (avg(next) - prevKnown.kg) * t;
+      // d falls strictly between known[idx - 1] and known[idx]
+      const prev = known[idx - 1];
+      const next = known[idx];
+      const span = daysBetween(prev.date, next.date);
+      const t = daysBetween(prev.date, d) / span;
+      out.push({ date: d, kg: prev.kg + (next.kg - prev.kg) * t });
     }
-    trend = d === first ? raw : trend + alpha * (raw - trend);
-    out.push({ date: d, value: trend });
   }
   return out;
 }
 
-/** kg/week change of the trend over the last `days` days (negative = losing). */
+/**
+ * Exponentially smoothed trend weight (default alpha = 0.1). Multiple weigh-ins on the same day
+ * are averaged; missing days are linearly interpolated before smoothing. Robust to unsorted input
+ * and duplicate dates; ignores non-finite or non-positive kg entries. Output has exactly one point
+ * per calendar day from the first to the last valid weigh-in, sorted ascending. Empty input
+ * (or input with no valid entries) returns [].
+ */
+export function trendWeight(weights: { date: DateKey; kg: number }[], alpha = 0.1): DailyPoint[] {
+  const known = dailyAverages(weights);
+  if (known.length === 0) return [];
+  const daily = interpolateDaily(known);
+
+  const out: DailyPoint[] = new Array(daily.length);
+  let trend = daily[0].kg;
+  out[0] = { date: daily[0].date, value: trend };
+  for (let i = 1; i < daily.length; i++) {
+    trend = trend + alpha * (daily[i].kg - trend);
+    out[i] = { date: daily[i].date, value: trend };
+  }
+  return out;
+}
+
+/**
+ * Ordinary least-squares slope (value per day) of a series of points against day offsets from
+ * the first point, computed via `daysBetween` (so it is correct even for gappy series). Returns 0
+ * when there are fewer than 2 points or zero x-variance.
+ */
+export function lsSlopePerDay(points: DailyPoint[]): number {
+  const n = points.length;
+  if (n < 2) return 0;
+  const base = points[0].date;
+  const xs = points.map((p) => daysBetween(base, p.date));
+  const ys = points.map((p) => p.value);
+  const xbar = xs.reduce((s, v) => s + v, 0) / n;
+  const ybar = ys.reduce((s, v) => s + v, 0) / n;
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - xbar;
+    num += dx * (ys[i] - ybar);
+    den += dx * dx;
+  }
+  return den === 0 ? 0 : num / den;
+}
+
+/**
+ * kg/week change of the trend, computed as the OLS slope of trend value vs. day offset over the
+ * last `days` + 1 points (or all points if fewer), times 7. Negative = losing. Returns 0 when
+ * there are fewer than 2 points or zero x-variance in the window.
+ */
 export function weeklyRate(trend: DailyPoint[], days = 14): number {
   if (trend.length < 2) return 0;
-  const end = trend[trend.length - 1];
-  const start = trend[Math.max(0, trend.length - 1 - days)];
-  const span = daysBetween(start.date, end.date);
-  return span > 0 ? ((end.value - start.value) / span) * 7 : 0;
+  const window = trend.slice(Math.max(0, trend.length - (days + 1)));
+  return lsSlopePerDay(window) * 7;
 }
