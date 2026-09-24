@@ -25,6 +25,25 @@ export function dailyAverages(weights: { date: DateKey; kg: number }[]): { date:
   });
 }
 
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+/**
+ * Keeps the underlying history intact while excluding implausible one-day averages from the trend.
+ * A point needs at least three nearby weigh-in days and must sit more than 3 kg from the robust
+ * median of up to three neighbours either side. Sustained changes retain enough support to pass.
+ */
+export function excludeWeightOutliers(known: { date: DateKey; kg: number }[]): { date: DateKey; kg: number }[] {
+  return known.filter((point, index) => {
+    const neighbours = known.slice(Math.max(0, index - 3), index).concat(known.slice(index + 1, index + 4));
+    if (neighbours.length < 3) return true;
+    return Math.abs(point.kg - median(neighbours.map((neighbour) => neighbour.kg))) <= 3;
+  });
+}
+
 /**
  * Linearly interpolates a sparse, sorted series of known daily averages into one value per
  * calendar day from the first to the last date (inclusive). O(n + days): a moving index tracks
@@ -54,13 +73,13 @@ export function interpolateDaily(known: { date: DateKey; kg: number }[]): { date
 
 /**
  * Exponentially smoothed trend weight (default alpha = 0.1). Multiple weigh-ins on the same day
- * are averaged; missing days are linearly interpolated before smoothing. Robust to unsorted input
- * and duplicate dates; ignores non-finite or non-positive kg entries. Output has exactly one point
- * per calendar day from the first to the last valid weigh-in, sorted ascending. Empty input
- * (or input with no valid entries) returns [].
+ * are averaged; implausible isolated daily averages are excluded; missing days are linearly
+ * interpolated before smoothing. Robust to unsorted input and duplicate dates; ignores non-finite
+ * or non-positive kg entries. Output has exactly one point per calendar day from the first to the
+ * last retained weigh-in, sorted ascending. Empty input (or input with no valid entries) returns [].
  */
 export function trendWeight(weights: { date: DateKey; kg: number }[], alpha = 0.1): DailyPoint[] {
-  const known = dailyAverages(weights);
+  const known = excludeWeightOutliers(dailyAverages(weights));
   if (known.length === 0) return [];
   const daily = interpolateDaily(known);
 

@@ -45,7 +45,7 @@ All sources use `FoodItem { id, source, name, brand?, per100, servings, barcode?
 
 - BMR uses Mifflin-St Jeor, or Katch-McArdle when body-fat percentage is available.
 - Initial TDEE is BMR multiplied by the configured activity multiplier.
-- Trend weight is an EMA with alpha around `0.1`, interpolating missing dates.
+- Trend weight is an EMA with alpha around `0.1`, interpolating missing dates and excluding implausible isolated daily averages from the trend without deleting history.
 - Adaptive expenditure uses average intake and the trend-weight energy change over a rolling 14-28 day window: `TDEE = avgIntake - (deltaTrendKg * 7700) / days`. It is smoothed against the prior estimate, capped at 100 kcal per week, and falls back to the initial calculation when the data is sparse. Missing and user-marked incomplete days are excluded.
 - Calories derive from TDEE and the selected rate of gain or loss. Protein is 1.6-2.2 g/kg, fat has a minimum of 0.6 g/kg, and carbs fill remaining calories. Diet presets alter these ratios.
 - Weekly check-ins recalculate expenditure and propose targets. Goal projection extrapolates the trend rate to the target weight.

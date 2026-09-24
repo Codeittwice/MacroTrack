@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { trendWeight, weeklyRate, lsSlopePerDay } from './trend';
+import { excludeWeightOutliers, trendWeight, weeklyRate, lsSlopePerDay } from './trend';
 import { addDays } from '@/lib/utils/date';
 import type { DateKey } from '@/db/types';
 
@@ -102,6 +102,17 @@ describe('trendWeight', () => {
     const out = trendWeight(shuffled);
     expect(out.map((p) => p.date)).toEqual(['2026-03-01', '2026-03-02', '2026-03-03', '2026-03-04']);
   });
+
+  it('excludes an implausible isolated average without changing the stored raw days', () => {
+    const known = Array.from({ length: 7 }, (_, index) => ({ date: addDays('2026-04-01', index), kg: index === 3 ? 90 : 80 }));
+    expect(excludeWeightOutliers(known).map((point) => point.date)).not.toContain('2026-04-04');
+    expect(trendWeight(known).every((point) => point.value === 80)).toBe(true);
+  });
+
+  it('keeps a sustained change that has local support', () => {
+    const known = Array.from({ length: 8 }, (_, index) => ({ date: addDays('2026-05-01', index), kg: index < 4 ? 80 : 84 }));
+    expect(excludeWeightOutliers(known)).toHaveLength(8);
+  });
 });
 
 describe('weeklyRate', () => {
@@ -135,13 +146,13 @@ describe('weeklyRate', () => {
     expect(Math.abs(rate - rateKgPerWeek)).toBeLessThan(0.15);
   });
 
-  it('uses least squares, not just the two endpoints (spike at the last point changes the answer)', () => {
-    // Flat weight, then a single spike on the very last day.
+  it('uses least squares, not just the two endpoints (a plausible final change changes the answer)', () => {
+    // Flat weight, then a modest final increase that should not be treated as a typo.
     const base: { date: DateKey; kg: number }[] = Array.from({ length: 15 }, (_, i) => ({
       date: addDays('2026-01-01', i),
       kg: 80,
     }));
-    base[base.length - 1] = { ...base[base.length - 1], kg: 90 };
+    base[base.length - 1] = { ...base[base.length - 1], kg: 82 };
     const trend = trendWeight(base);
 
     const endpointRate =

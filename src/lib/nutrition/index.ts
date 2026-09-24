@@ -7,7 +7,7 @@ export * from './types';
 
 export { mifflinStJeor, katchMcArdle, bmr, initialTdee } from './bmr';
 export { PROTEIN_G_PER_KG, computeTargets, targetsFromProfile, computeTargetsPerWeekday } from './targets';
-export { trendWeight, weeklyRate, dailyAverages, interpolateDaily, lsSlopePerDay } from './trend';
+export { trendWeight, weeklyRate, dailyAverages, excludeWeightOutliers, interpolateDaily, lsSlopePerDay } from './trend';
 export { estimateExpenditure, expenditureSeries } from './expenditure';
 export { projectGoalDate } from './projection';
 export { proposeCheckIn, type ProposeCheckInArgs, type ProposeCheckInResult } from './checkin';
