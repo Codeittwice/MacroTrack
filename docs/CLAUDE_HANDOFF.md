@@ -12,8 +12,9 @@ Committed milestones:
 - Wave 2 integration and current Wave 3 foundations: `58897c6` (pushed to `origin/feature/app-build`).
 - Wave 3 reusable recipe and saved-meal workflows: `1035390` (pushed to `origin/feature/app-build`).
 - Wave 3 barcode lookup and opt-in scanner: `b7df528` (pushed to `origin/feature/app-build`).
+- Wave 3 validated AI estimate grounding: `c297e4a` (pushed to `origin/feature/app-build`).
 
-The Wave 2 and current Wave 3 work is checkpointed through `b7df528`. Preserve subsequent working-tree changes; do not reset, checkout, or discard them.
+The Wave 2 and current Wave 3 work is checkpointed through `c297e4a`. Preserve subsequent working-tree changes; do not reset, checkout, or discard them.
 
 ## What Was Added In This Pass
 
