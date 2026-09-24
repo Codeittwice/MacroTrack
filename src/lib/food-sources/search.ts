@@ -1,5 +1,6 @@
 import type { FoodItem, FoodSource, FoodSourceId } from '@/db/types';
 import { nevoSource } from './nevo';
+import { offSource } from './off';
 import { userFoodsSource, recipesSource } from './user';
 import { normalizeText, normalizeQuery, normalizeForIndex } from './normalize';
 
@@ -22,6 +23,7 @@ function ensureDefaults() {
   if (defaultsRegistered) return;
   defaultsRegistered = true;
   registerFoodSource(nevoSource);
+  registerFoodSource(offSource);
   registerFoodSource(userFoodsSource);
   registerFoodSource(recipesSource);
 }
