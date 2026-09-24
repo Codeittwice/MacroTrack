@@ -6,6 +6,7 @@ import { AppearanceSection } from './AppearanceSection';
 import { UnitsSection } from './UnitsSection';
 import { MealsSection } from './MealsSection';
 import { WaterSection } from './WaterSection';
+import { RemindersSection } from './RemindersSection';
 import { AiSection } from './AiSection';
 import { AboutSection } from './AboutSection';
 import { DangerZone } from './DangerZone';
@@ -30,6 +31,7 @@ export default function SettingsPage() {
       <UnitsSection />
       <MealsSection />
       <WaterSection />
+      <RemindersSection />
       <AiSection />
       <AboutSection />
       <DangerZone />

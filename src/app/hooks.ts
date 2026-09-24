@@ -6,7 +6,8 @@ import type { DateKey, MacroTargets, Profile, Settings, TargetSet } from '@/db/t
 import { fromDateKey } from '@/lib/utils/date';
 
 export function useSettings(): Settings {
-  return useLiveQuery(() => db.settings.get('settings'), []) ?? DEFAULT_SETTINGS;
+  const stored = useLiveQuery(() => db.settings.get('settings'), []);
+  return { ...DEFAULT_SETTINGS, ...stored };
 }
 
 /** undefined while loading, null when not onboarded. */

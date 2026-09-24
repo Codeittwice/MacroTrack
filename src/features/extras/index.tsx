@@ -8,6 +8,7 @@ import { today } from '@/lib/utils/date';
 import type { Measurement, ProgressPhoto } from '@/db/types';
 import { deleteMeasurement, MEASUREMENT_FIELDS, saveMeasurement, useMeasurements } from '@/lib/measurements/actions';
 import { deletePhoto, savePhoto, usePhotos } from '@/lib/photos/actions';
+import { backupFileName, createBackup, parseBackup, restoreBackup } from '@/lib/backup/actions';
 
 function WaterPage() {
   const settings = useSettings();
@@ -63,12 +64,23 @@ function PhotosPage() {
   return <div className="mx-auto flex max-w-lg flex-col gap-4"><PageHeader title="Progress photos" /><Card><div className="mb-3 font-medium">Add photo</div><div className="flex flex-col gap-3"><input aria-label="Progress photo" type="file" accept="image/*" onChange={(event) => setFile(event.target.files?.[0])} /><select aria-label="Photo pose" value={pose} onChange={(event) => setPose(event.target.value as ProgressPhoto['pose'])} className="h-11 rounded-xl border border-border bg-surface-2 px-3"><option value="front">Front</option><option value="side">Side</option><option value="back">Back</option></select><Button variant="primary" disabled={!file || saving} onClick={() => void upload()}><Plus size={18} /> {saving ? 'Saving...' : 'Save photo'}</Button></div>{error && <div role="status" className="mt-3 text-sm text-danger">{error}</div>}</Card>{photos.length === 0 ? <EmptyState icon={<Image size={32} />} title="No progress photos yet" body="Keep a private visual record alongside your measurements." /> : <div className="grid grid-cols-2 gap-3">{photos.map((photo) => <Card key={photo.id} className="p-2"><PhotoPreview photo={photo} /><div className="mt-2 flex items-center justify-between gap-2"><span className="text-xs text-muted">{photo.date}, {photo.pose ?? 'front'}</span><button type="button" aria-label={`Delete photo from ${photo.date}`} onClick={() => { if (confirmDelete === photo.id) void deletePhoto(photo.id); else setConfirmDelete(photo.id); }} className="rounded-lg p-1.5 text-muted hover:bg-surface-2"><Trash2 size={16} /></button></div>{confirmDelete === photo.id && <div className="mt-1 text-xs text-danger">Tap delete again</div>}</Card>)}</div>}</div>;
 }
 
+function BackupPage() {
+  const [file, setFile] = useState<File>();
+  const [status, setStatus] = useState<string | null>(null);
+  const [confirmRestore, setConfirmRestore] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const exportData = async () => { setBusy(true); try { const backup = await createBackup(); const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = backupFileName(); link.click(); URL.revokeObjectURL(url); setStatus('Backup downloaded.'); } finally { setBusy(false); } };
+  const importData = async () => { if (!file) return; if (!confirmRestore) { setConfirmRestore(true); return; } setBusy(true); try { await restoreBackup(parseBackup(await file.text())); setStatus('Backup restored.'); setConfirmRestore(false); } catch (reason) { setStatus(reason instanceof Error ? reason.message : 'Could not restore this backup.'); setConfirmRestore(false); } finally { setBusy(false); } };
+  return <div className="mx-auto flex max-w-lg flex-col gap-4"><PageHeader title="Export and backup" /><Card><div className="mb-2 font-medium">Export backup</div><div className="mb-3 text-sm text-muted">Your food, weight, targets, check-ins, and settings are saved in a local JSON file. API keys and photos stay on this device.</div><Button variant="primary" disabled={busy} onClick={() => void exportData()}>Download backup</Button></Card><Card><div className="mb-2 font-medium">Restore backup</div><div className="mb-3 text-sm text-muted">Restoring replaces tracker data on this device. Your local API keys remain private and unchanged.</div><input aria-label="Backup file" type="file" accept="application/json,.json" onChange={(event) => { setFile(event.target.files?.[0]); setConfirmRestore(false); }} /><Button variant="danger" className="mt-3 w-full" disabled={!file || busy} onClick={() => void importData()}>{confirmRestore ? 'Tap again to replace data' : 'Restore backup'}</Button></Card>{status && <div role="status" className="text-sm text-muted">{status}</div>}</div>;
+}
+
 export default function ExtrasPage() {
   const section = useParams()['*'];
   const navigate = useNavigate();
   if (section === 'water') return <WaterPage />;
   if (section === 'measurements') return <MeasurementsPage />;
   if (section === 'photos') return <PhotosPage />;
+  if (section === 'backup') return <BackupPage />;
   const title = section === 'measurements' ? 'Body measurements' : section === 'photos' ? 'Progress photos' : section === 'backup' ? 'Export and backup' : 'Extras';
   return <div className="mx-auto max-w-lg"><PageHeader title={title} right={section ? <Button variant="ghost" size="sm" onClick={() => navigate('/more')}>Back</Button> : undefined} /><EmptyState title="Coming in this Wave" body="This workflow is next in the Wave 4 build." /></div>;
 }

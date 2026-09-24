@@ -5,6 +5,7 @@ import { QuickActions } from './QuickActions';
 import { StatTiles } from './StatTiles';
 import { TodayMeals } from './TodayMeals';
 import { WeightCard } from './WeightCard';
+import { WaterReminderBanner } from './WaterReminderBanner';
 import { formattedToday, greeting } from './format';
 import { mealForTime } from './mealForTime';
 import { useDashboardData } from './useDashboardData';
@@ -52,6 +53,10 @@ export default function DashboardPage() {
 
       <div className="lg:col-span-2">
         <CheckInBanner visible={showCheckIn} />
+      </div>
+
+      <div className="lg:col-span-2">
+        <WaterReminderBanner settings={settings} />
       </div>
 
       <div className="flex flex-col gap-4">

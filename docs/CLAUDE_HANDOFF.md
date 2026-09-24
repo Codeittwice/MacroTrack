@@ -14,6 +14,7 @@ Committed milestones:
 - Wave 3 barcode lookup and opt-in scanner: `b7df528` (pushed to `origin/feature/app-build`).
 - Wave 3 validated AI estimate grounding: `c297e4a` (pushed to `origin/feature/app-build`).
 - Wave 3 provider transport and estimate review: `358ebf7` (pushed to `origin/feature/app-build`).
+- Wave 4 coach, progress, water, measurement, and photo checkpoints are pushed through `022af17`.
 
 The Wave 2 and current Wave 3 work is checkpointed through `358ebf7`. Preserve subsequent working-tree changes; do not reset, checkout, or discard them.
 
@@ -45,6 +46,8 @@ The Wave 2 and current Wave 3 work is checkpointed through `358ebf7`. Preserve s
 - Wave 4 Water is live under More. A daily total is persisted in the existing sync-ready table, supports quick additions and a manual total, and tracks progress against the Settings water goal.
 - Wave 4 Measurements are live under More. Waist, chest, and hips can be logged for a date, edited through one daily upsert record, and removed from active history.
 - Wave 4 Progress Photos are live under More. Local image blobs are validated, stored with date and pose metadata, displayed as private local previews, and require a deliberate second delete tap.
+- Wave 4 Backup is complete. Export produces a versioned JSON backup of tracker records; import validates that shape, requires a second explicit restore action, replaces the portable data atomically, and retains local AI API keys. Photos intentionally remain local and are called out in the export UI.
+- Wave 4 Reminders are complete. Settings now persist an opt-in water reminder time, and the Dashboard gives an actionable daily water prompt after that time while the user remains below the configured goal.
 
 The data APIs used by the UI already exist in `src/lib/log/actions.ts`, `src/lib/foods/foods.ts`, and `src/lib/food-sources/search.ts`. Keep these as the write/search ownership points rather than duplicating IndexedDB work in feature components.
 
@@ -54,7 +57,7 @@ Completed after the integration changes:
 
 ```text
 npm run build  # passed; Vite PWA bundle produced
-npm test       # passed; 29 files, 257 tests
+npm test       # passed; 32 files, 263 tests
 ```
 
 Manual mobile smoke check at `http://127.0.0.1:5173`:
@@ -76,8 +79,8 @@ The existing NEVO fetch-failure test emits an expected `network down` diagnostic
 3. Manually test the complete recipe and saved-meal save, edit, re-log, and delete flow in a browser, then add Playwright coverage once browser binaries are available.
 4. Validate the barcode camera flow on a physical Android device or browser with a real camera. Confirm permission denial, cancellation, success, and the offline cached-product path.
 5. Commit and push each completed Wave 3 checkpoint to `origin/feature/app-build`; do not include unrelated generated files.
-6. Build the remaining Wave 4 reminders and backup/import workflows. Keep each coherent slice checkpointed and pushed to `origin/feature/app-build`.
-7. Add roughly thirty weighed Dutch meal/product fixtures plus `npm run eval:ai` coverage for raw and grounded calorie/protein error. Finish the AI security audit and validate one request per configured provider with a user-owned test key before calling the AI work complete.
+6. Add roughly thirty weighed Dutch meal/product fixtures plus `npm run eval:ai` coverage for raw and grounded calorie/protein error. Finish the AI security audit and validate one request per configured provider with a user-owned test key before calling the AI work complete.
+7. Add a native scheduled-notification adapter during Wave 5 if closed-app water notifications are required; the current Wave 4 reminder is deliberately an in-app dashboard prompt.
 
 ## Intentional Deferrals
 
@@ -85,9 +88,9 @@ The existing NEVO fetch-failure test emits an expected `network down` diagnostic
 - Open Food Facts search, barcode lookup, and camera scanning UI are implemented. Hardware permission, cancellation, and real-product checks still need a physical-device validation.
 - Recipe and Saved Meal creation, editing, deletion, and re-logging are implemented.
 - Photo estimation and fixture-driven AI evaluation are not yet implemented. Provider transports, validation, grounding, and review-before-logging are implemented but still require user-owned-key and security-audit validation.
-- Adaptive coach, progress statistics, extras, Tauri packaging, and sync remain later waves.
+- Capacitor/Tauri packaging and sync remain later waves. Wave 4 coach, progress statistics, extras, backup/import, and the in-app water reminder are implemented.
 - Existing audit items remain: onboarding activity/diet cards need better button semantics, expenditure shrinkage needs explicit test coverage, and outlier handling is not yet implemented.
 
 ## Suggested Message To Claude
 
-> Please continue MacroTrack from the latest pushed checkpoint on `feature/app-build`. Read `docs/PLAN.md` and `docs/CLAUDE_HANDOFF.md` first. Wave 2's custom-food-to-dashboard flow is verified. Wave 3 has an Open Food Facts Netherlands adapter with Dexie caching, barcode lookup and opt-in camera scanning, plus working recipe and saved-meal creation, management, and re-logging. `Describe meal` has provider transports, Zod validation, local-food grounding, and review-before-logging. Build the weighed-fixture evaluation script and complete the AI security audit next. NEVO source data, Playwright browser binaries, user-owned provider-key testing, and physical camera validation are still external prerequisites.
+> Please continue MacroTrack from the latest pushed checkpoint on `feature/app-build`. Read `docs/PLAN.md` and `docs/CLAUDE_HANDOFF.md` first. Wave 4 is complete: coach approval, progress statistics, water, measurements, local photos, versioned JSON backup/restore, and an in-app water reminder are all implemented. Wave 3 has Open Food Facts Netherlands search/cache, barcode lookup and opt-in camera scanning, recipe/saved-meal workflows, and `Describe meal` provider transports with validation, grounding, and review-before-logging. The next meaningful work is the weighed-fixture AI evaluation/security audit, then Wave 5 packaging. NEVO source data, Playwright browser binaries, user-owned provider-key testing, and physical camera validation remain external prerequisites.

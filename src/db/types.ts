@@ -91,6 +91,9 @@ export interface Settings {
   apiKeys: Partial<Record<AiProviderId, string>>;
   mealNames: string[]; // default ['Breakfast','Lunch','Dinner','Snacks']
   waterGoalMl: number;
+  waterReminderEnabled: boolean;
+  /** Local clock time in HH:MM format. */
+  waterReminderTime: string;
   syncEnabled: boolean;
   updatedAt: number;
 }

@@ -12,12 +12,14 @@ export const DEFAULT_SETTINGS: Settings = {
   apiKeys: {},
   mealNames: ['Breakfast', 'Lunch', 'Dinner', 'Snacks'],
   waterGoalMl: 2500,
+  waterReminderEnabled: false,
+  waterReminderTime: '20:00',
   syncEnabled: false,
   updatedAt: 0,
 };
 
 export async function getSettings(): Promise<Settings> {
-  return (await db.settings.get('settings')) ?? DEFAULT_SETTINGS;
+  return { ...DEFAULT_SETTINGS, ...(await db.settings.get('settings')) };
 }
 
 export async function updateSettings(patch: Partial<Settings>): Promise<void> {

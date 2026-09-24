@@ -83,7 +83,8 @@ Waves run in sequence; workstreams within a wave have disjoint file ownership. T
 
 - Wave 0 is complete (`4608e40`).
 - Wave 1 is complete (`f5047ac`) and its maths audit issues were fixed with regressions.
-- Wave 2 contracts are committed (`deabe7e`); Weight, Food Log/Add Food and Dashboard are the current integration work.
+- Wave 2 and Wave 3 feature work are integrated and checkpointed on `feature/app-build` through the AI review flow (`358ebf7`).
+- Wave 4 is complete on the current branch: weekly coach approval, progress statistics, water, measurements, local progress photos, guarded JSON backup/restore, and an in-app water reminder.
 - Android Studio/emulator setup and the licensed NEVO source CSV remain external prerequisites.
 
 ## Verification Checklist
