@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/db/schema';
 import type { FoodItem } from '@/db/types';
-import { createRecipe, createSavedMeal, deleteRecipe, deleteSavedMeal, updateRecipe, updateSavedMeal } from './actions';
+import { createRecipe, createSavedMeal, deleteRecipe, deleteSavedMeal, logSavedMeal, saveLogEntriesAsMeal, updateRecipe, updateSavedMeal } from './actions';
+import { addLogEntry } from '@/lib/log/actions';
 
 const FOOD: FoodItem = {
   id: 'nevo:test', source: 'nevo', name: 'Test food', per100: { kcal: 100, protein: 10, carbs: 5, fat: 2 }, servings: [{ label: '100 g', grams: 100 }],
 };
 
 beforeEach(async () => {
-  await Promise.all([db.recipes.clear(), db.savedMeals.clear()]);
+  await Promise.all([db.recipes.clear(), db.savedMeals.clear(), db.logEntries.clear()]);
 });
 
 describe('recipes', () => {
@@ -41,5 +42,14 @@ describe('saved meals', () => {
     expect(updated?.name).toBe('Weekday breakfast');
     await deleteSavedMeal(meal.id);
     expect((await db.savedMeals.get(meal.id))?.deletedAt).toBeTypeOf('number');
+  });
+
+  it('saves logged snapshots and logs all saved items into a target meal', async () => {
+    const entry = await addLogEntry({ date: '2026-09-24', meal: 0, food: FOOD, grams: 150 });
+    const saved = await saveLogEntriesAsMeal('Saved breakfast', [entry]);
+    const copies = await logSavedMeal(saved, '2026-09-25', 2);
+    expect(copies).toHaveLength(1);
+    expect(copies[0]).toMatchObject({ date: '2026-09-25', meal: 2, grams: 150, name: 'Test food' });
+    expect(copies[0].nutrients.kcal).toBeCloseTo(150, 5);
   });
 });

@@ -1,7 +1,8 @@
 /** Recipe and saved-meal mutations. Food snapshots are retained in ingredients/items for offline reuse. */
 import { db } from '@/db/schema';
 import { alive, newRecord } from '@/db/repo';
-import type { FoodItem, Recipe, SavedMeal } from '@/db/types';
+import type { DateKey, FoodItem, LogEntry, Recipe, SavedMeal } from '@/db/types';
+import { addLogEntry } from '@/lib/log/actions';
 
 export interface RecipeIngredient {
   food: FoodItem;
@@ -85,4 +86,22 @@ export async function updateSavedMeal(id: string, patch: Partial<SavedMealInput>
 
 export async function deleteSavedMeal(id: string): Promise<void> {
   await db.savedMeals.update(id, { deletedAt: Date.now(), updatedAt: Date.now() });
+}
+
+function logEntryToFood(entry: LogEntry): FoodItem {
+  const per100 = entry.per100 ?? (entry.grams > 0
+    ? { kcal: (entry.nutrients.kcal * 100) / entry.grams, protein: (entry.nutrients.protein * 100) / entry.grams, carbs: (entry.nutrients.carbs * 100) / entry.grams, fat: (entry.nutrients.fat * 100) / entry.grams }
+    : { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  return { id: entry.foodId, source: entry.source, name: entry.name, brand: entry.brand, per100, servings: [], unit: 'g' };
+}
+
+/** Save a meal's logged snapshots for future offline reuse. */
+export async function saveLogEntriesAsMeal(name: string, entries: LogEntry[]): Promise<SavedMeal> {
+  return createSavedMeal({ name, items: entries.map((entry) => ({ food: logEntryToFood(entry), grams: entry.grams })) });
+}
+
+/** Log every item in a saved meal, snapshotting current serving amounts into the target meal. */
+export async function logSavedMeal(savedMeal: SavedMeal, date: DateKey, meal: number): Promise<LogEntry[]> {
+  if (!alive(savedMeal)) throw new Error(`saved meal ${savedMeal.id} not found`);
+  return Promise.all(savedMeal.items.map((item) => addLogEntry({ date, meal, food: item.food, grams: item.grams })));
 }

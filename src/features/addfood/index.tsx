@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Clock3, Heart, Plus, Search, Star, Trash2, Zap } from 'lucide-react';
 import { Button, Input, Label, NumberInput, Segmented, Sheet, SourceBadge } from '@/components/ui';
 import { useSettings } from '@/app/hooks';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/db/schema';
+import { alive } from '@/db/repo';
 import type { DateKey, FoodItem, LogEntry, Nutrients } from '@/db/types';
 import { createCustomFood, toggleFavorite } from '@/lib/foods';
 import { useFavoriteFoods, useFrequentFoods, useIsFavorite, useRecentFoods } from '@/lib/foods/hooks';
 import { addLogEntry, deleteLogEntry, quickAdd, moveLogEntry, updateLogEntryGrams } from '@/lib/log/actions';
 import { searchFoods } from '@/lib/food-sources/search';
 import { scale } from '@/lib/utils/nutrients';
+import { logSavedMeal } from '@/lib/recipes/actions';
 import { fmtG, fmtKcal } from './format';
 import { useAddFoodTabs } from './registry';
 
@@ -194,10 +198,12 @@ function LibrarySection({ title, icon, foods, onSelect }: { title: string; icon:
   );
 }
 
-function LibraryTab({ onSelect }: { onSelect: (food: FoodItem) => void }) {
+function LibraryTab({ date, meal, onLogged, onSelect }: { date: DateKey; meal: number; onLogged: () => void; onSelect: (food: FoodItem) => void }) {
   const recents = useRecentFoods(10);
   const frequent = useFrequentFoods(10);
   const favourites = useFavoriteFoods();
+  const savedMeals = useLiveQuery(() => db.savedMeals.orderBy('updatedAt').reverse().toArray().then((items) => items.filter(alive)), []);
+  const [savingMealId, setSavingMealId] = useState<string | null>(null);
   const hasFood = (recents?.length ?? 0) + (frequent?.length ?? 0) + (favourites?.length ?? 0) > 0;
 
   return (
@@ -206,6 +212,7 @@ function LibraryTab({ onSelect }: { onSelect: (food: FoodItem) => void }) {
       <LibrarySection title="Recent" icon={<Clock3 size={15} />} foods={recents} onSelect={onSelect} />
       <LibrarySection title="Frequent" icon={<Zap size={15} />} foods={frequent} onSelect={onSelect} />
       <LibrarySection title="Favourites" icon={<Heart size={15} />} foods={favourites} onSelect={onSelect} />
+      {savedMeals && savedMeals.length > 0 && <section><h3 className="mb-1 px-2 text-sm font-medium text-muted">Saved meals</h3><div className="divide-y divide-border">{savedMeals.map((savedMeal) => <button key={savedMeal.id} type="button" disabled={savingMealId !== null} onClick={async () => { setSavingMealId(savedMeal.id); try { await logSavedMeal(savedMeal, date, meal); onLogged(); } finally { setSavingMealId(null); } }} className="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-2 text-left hover:bg-surface-2 disabled:opacity-50"><span className="min-w-0"><span className="block truncate font-medium">{savedMeal.name}</span><span className="text-xs text-muted">{savedMeal.items.length} foods</span></span><Plus size={18} className="shrink-0 text-primary" /></button>)}</div></section>}
     </div>
   );
 }
@@ -341,7 +348,7 @@ export function AddFoodSheet({ open, onClose, date, meal, initialTab }: {
     <>
       <Segmented options={availableTabs.map((candidate) => ({ value: candidate.id, label: candidate.label }))} value={tab} onChange={setTab} className="mb-4 overflow-x-auto" />
       {tab === 'search' && <SearchTab onSelect={setSelectedFood} />}
-      {tab === 'library' && <LibraryTab onSelect={setSelectedFood} />}
+      {tab === 'library' && <LibraryTab date={date} meal={meal} onLogged={logged} onSelect={setSelectedFood} />}
       {tab === 'quick' && <QuickAddTab date={date} meal={meal} onLogged={logged} />}
       {tab === 'new' && <NewFoodTab onSelect={setSelectedFood} />}
       {extensions.filter((candidate) => candidate.id === tab).map((candidate) => <div key={candidate.id}>{candidate.render({ date, meal, onLogged: logged, openFood: setSelectedFood })}</div>)}
