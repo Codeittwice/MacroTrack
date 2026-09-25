@@ -8,6 +8,7 @@ import {
   buildNevoFile,
   type NevoRow_Internal,
 } from './build-nevo';
+import { detectNevoVersion } from './build-nevo';
 
 const fixturePath = path.resolve(process.cwd(), 'scripts/fixtures/nevo-sample.csv');
 const fixtureText = readFileSync(fixturePath, 'utf-8');
@@ -91,14 +92,17 @@ describe('parseNevoCsv', () => {
     expect(kjRow.kcal).toBeCloseTo(expectedKcal, 1);
   });
 
-  it('rounds numeric values to 1 decimal', () => {
-    const rows = parseNevoCsv(fixtureText);
-    for (const r of rows) {
-      for (const v of [r.kcal, r.protein, r.carbs, r.fat, r.fiber, r.sugar, r.satFat, r.sodium, r.alcohol]) {
-        if (v === null) continue;
-        expect(Math.round(v * 10) / 10).toBeCloseTo(v, 5);
-      }
-    }
+  it('keeps values exactly as published (RIVM terms forbid changing the data)', () => {
+    const csv = fixtureText.replace(/250,5/, '250,57');
+    const turks = parseNevoCsv(csv).find((r) => /Turks/.test(r.nameNl))!;
+    expect(turks.kcal).toBe(250.57);
+  });
+
+  it('reads the NEVO version from the file name for the required attribution', () => {
+    expect(detectNevoVersion('NEVO2025_v9.0.csv')).toBe('2025/9.0');
+    expect(detectNevoVersion('NEVO-online 2027 10.0.csv')).toBe('2027/10.0');
+    expect(detectNevoVersion('export.csv')).toBe('2025/9.0');
+    expect(buildNevoFile([], 'NEVO2025_v9.0.csv').header.attribution).toBe('NEVO-online versie 2025/9.0, RIVM, Bilthoven');
   });
 
   it('tolerates XLSX-style headers with units and extra spaces', () => {
@@ -135,7 +139,7 @@ describe('buildNevoFile', () => {
     const rows = parseNevoCsv(fixtureText);
     const file = buildNevoFile(rows);
     expect(file.header.count).toBe(rows.length);
-    expect(file.header.version).toBe('NEVO2023');
+    expect(file.header.version).toBe('2025/9.0');
     for (const row of file.rows) {
       expect(row.length).toBe(15);
     }

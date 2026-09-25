@@ -11,6 +11,7 @@ import { useFavoriteFoods, useFrequentFoods, useIsFavorite, useRecentFoods } fro
 import { addLogEntry, deleteLogEntry, quickAdd, moveLogEntry, updateLogEntryGrams } from '@/lib/log/actions';
 import { searchFoods } from '@/lib/food-sources/search';
 import { offSearchStatus } from '@/lib/food-sources/off';
+import { nevoCredit } from '@/lib/food-sources/nevo';
 import { scale } from '@/lib/utils/nutrients';
 import { logSavedMeal } from '@/lib/recipes/actions';
 import { fmtG, fmtKcal } from './format';
@@ -192,6 +193,7 @@ function SearchTab({ onSelect }: { onSelect: (food: FoodItem) => void }) {
         ? <div className="py-8 text-center text-sm text-muted">No foods found. Try other words, scan the barcode, or create a food.</div>
         : <div className="py-8 text-center text-sm text-muted">Search Dutch foods and supermarket products, e.g. <span className="text-text">AH turks brood</span> or <span className="text-text">kwark</span>.</div>)}
       {results && results.length > 0 && <div className="divide-y divide-border">{results.map((food) => <FoodRow key={food.id} food={food} onSelect={onSelect} />)}</div>}
+      {results?.some((food) => food.source === 'nevo') && <p className="pt-3 text-center text-[11px] text-muted">{nevoCredit()}</p>}
       {results !== undefined && query.trim().length >= 3 && offSearchStatus() !== 'ok' && (
         <p className="pt-3 text-center text-xs text-muted">
           {offSearchStatus() === 'offline'

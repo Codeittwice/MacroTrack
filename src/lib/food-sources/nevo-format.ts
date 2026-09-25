@@ -4,7 +4,7 @@
  * so the Node build script can import it without pulling in browser code.
  */
 
-/** One NEVO food, per 100 g (or 100 ml when unit === 'ml'). Numbers rounded to 1 decimal. */
+/** One NEVO food, per 100 g (or 100 ml when unit === 'ml'). Values exactly as published by RIVM (no rounding). */
 export type NevoRow = [
   code: number,
   nameNl: string,

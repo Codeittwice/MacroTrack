@@ -1,4 +1,5 @@
-// Builds public/data/nevo.json from a NEVO2023 CSV export placed in data/raw/.
+// Builds public/data/nevo.json from a NEVO-online CSV export placed in data/raw/.
+// RIVM terms: data must be used unchanged (no rounding here) and credited with source + version.
 // See scripts/fixtures/README.md for a synthetic sample used by the tests.
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'node:fs';
@@ -214,9 +215,6 @@ function parseNevoNumber(raw: string | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function round1(n: number): number {
-  return Math.round(n * 10) / 10;
-}
 
 // ---------------------------------------------------------------------------
 // Row parsing
@@ -302,15 +300,15 @@ export function parseNevoCsv(text: string): NevoRow_Internal[] {
       synonyms,
       group,
       unit,
-      kcal: round1(kcal),
-      protein: round1(protein),
-      carbs: round1(carbs),
-      fat: round1(fat),
-      fiber: fiber !== null ? round1(fiber) : null,
-      sugar: sugar !== null ? round1(sugar) : null,
-      satFat: satFat !== null ? round1(satFat) : null,
-      sodium: sodium !== null ? round1(sodium) : null,
-      alcohol: alcohol !== null ? round1(alcohol) : null,
+      kcal: kcal,
+      protein: protein,
+      carbs: carbs,
+      fat: fat,
+      fiber: fiber !== null ? fiber : null,
+      sugar: sugar !== null ? sugar : null,
+      satFat: satFat !== null ? satFat : null,
+      sodium: sodium !== null ? sodium : null,
+      alcohol: alcohol !== null ? alcohol : null,
     });
   }
 
@@ -321,8 +319,16 @@ export function parseNevoCsv(text: string): NevoRow_Internal[] {
 // Output file assembly
 // ---------------------------------------------------------------------------
 
-const SOURCE_LABEL = 'RIVM NEVO-online 2023';
-const ATTRIBUTION = 'NEVO-online versie 2023/8.0, RIVM, Bilthoven';
+/** Fallback when the file name doesn't carry a version (NEVO names files like NEVO2025_v9.0.csv). */
+export const DEFAULT_NEVO_VERSION = '2025/9.0';
+
+/** "NEVO2025_v9.0.csv" / "NEVO-online 2025 9.0.csv" -> "2025/9.0". */
+export function detectNevoVersion(fileName?: string): string {
+  const m = fileName ? /nevo\D*(20\d{2})\D+v?(\d{1,2}\.\d)/i.exec(fileName) : null;
+  return m ? `${m[1]}/${m[2]}` : DEFAULT_NEVO_VERSION;
+}
+
+export const nevoAttribution = (version: string) => `NEVO-online versie ${version}, RIVM, Bilthoven`;
 
 function toTuple(r: NevoRow_Internal): NevoRow {
   return [
@@ -348,9 +354,9 @@ function toTuple(r: NevoRow_Internal): NevoRow {
 export function buildNevoFile(rows: NevoRow_Internal[], sourceFileName?: string): NevoFile {
   return {
     header: {
-      version: 'NEVO2023',
-      source: sourceFileName ? `${SOURCE_LABEL} (${sourceFileName})` : SOURCE_LABEL,
-      attribution: ATTRIBUTION,
+      version: detectNevoVersion(sourceFileName),
+      source: sourceFileName ? `RIVM NEVO-online (${sourceFileName})` : 'RIVM NEVO-online',
+      attribution: nevoAttribution(detectNevoVersion(sourceFileName)),
       count: rows.length,
     },
     rows: rows.map(toTuple),
@@ -361,8 +367,8 @@ function buildEmptyNevoFile(): NevoFile {
   return {
     header: {
       version: 'none',
-      source: SOURCE_LABEL,
-      attribution: ATTRIBUTION,
+      source: 'RIVM NEVO-online',
+      attribution: nevoAttribution(DEFAULT_NEVO_VERSION),
       count: 0,
     },
     rows: [],
@@ -428,7 +434,7 @@ export function main(): void {
     console.log('No NEVO CSV found in data/raw/.');
     console.log('');
     console.log('To build the real nutrient database:');
-    console.log('  1. Download NEVO-online 2023 from https://www.rivm.nl/nevo (accept the licence).');
+    console.log('  1. Download NEVO-online via https://www.rivm.nl/form/nevo-online-gegevensbestand-2 (accept the RIVM terms).');
     console.log('  2. Save/export the CSV into data/raw/.');
     console.log('  3. Run `npm run nevo` again.');
     console.log('');

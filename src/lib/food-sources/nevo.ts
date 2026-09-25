@@ -147,3 +147,11 @@ export const nevoSource: FoodSource = {
   search: searchNevo,
   getById: getNevoById,
 };
+
+/**
+ * RIVM's required credit for figures calculated from NEVO. MacroTrack mixes NEVO with Open Food
+ * Facts, user and AI data, so it uses the "en andere gegevens" form from the terms of use.
+ */
+export function nevoCredit(version = header?.version && header.version !== 'none' ? header.version : '2025/9.0'): string {
+  return `Gebaseerd op gegevens van NEVO-online versie ${version}, RIVM, Bilthoven en andere gegevens`;
+}
