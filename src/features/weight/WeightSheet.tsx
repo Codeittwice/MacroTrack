@@ -91,7 +91,7 @@ export function WeightSheet({
       <div key={entry?.id ?? 'new'} className="flex flex-col gap-4">
         <div>
           <Label>Date</Label>
-          <Input type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} />
+          <Input type="date" aria-label="Weigh-in date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} />
         </div>
 
         <div>
@@ -105,7 +105,7 @@ export function WeightSheet({
             >
               <Minus size={18} />
             </button>
-            <NumberInput value={weight} onValue={setWeight} suffix={unit} autoFocus className="flex-1" />
+            <NumberInput aria-label="Weight" value={weight} onValue={setWeight} suffix={unit} autoFocus className="flex-1" />
             <button
               type="button"
               aria-label={`Increase by 0.1 ${unit}`}
@@ -120,13 +120,13 @@ export function WeightSheet({
 
         <div>
           <Label hint="Optional">Body fat</Label>
-          <NumberInput value={bodyFat} onValue={setBodyFat} suffix="%" />
+          <NumberInput aria-label="Body fat" value={bodyFat} onValue={setBodyFat} suffix="%" />
           {!bodyFatValid && <div className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>Must be between 0 and 75%</div>}
         </div>
 
         <div>
           <Label hint="Optional">Note</Label>
-          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. after workout" />
+          <Input aria-label="Note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. after workout" />
         </div>
 
         <div className="mt-2 flex gap-2">
