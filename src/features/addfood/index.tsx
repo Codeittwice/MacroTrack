@@ -188,7 +188,9 @@ function SearchTab({ onSelect }: { onSelect: (food: FoodItem) => void }) {
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search foods" className="pl-10" autoFocus />
       </label>
       {results === undefined && <div className="py-8 text-center text-sm text-muted">Searching…</div>}
-      {results?.length === 0 && <div className="py-8 text-center text-sm text-muted">No foods found. Create one or use Quick add.</div>}
+      {results?.length === 0 && (query.trim()
+        ? <div className="py-8 text-center text-sm text-muted">No foods found. Try other words, scan the barcode, or create a food.</div>
+        : <div className="py-8 text-center text-sm text-muted">Search Dutch foods and supermarket products, e.g. <span className="text-text">AH turks brood</span> or <span className="text-text">kwark</span>.</div>)}
       {results && results.length > 0 && <div className="divide-y divide-border">{results.map((food) => <FoodRow key={food.id} food={food} onSelect={onSelect} />)}</div>}
       {results !== undefined && query.trim().length >= 3 && offSearchStatus() !== 'ok' && (
         <p className="pt-3 text-center text-xs text-muted">
@@ -375,7 +377,7 @@ export function AddFoodSheet({ open, onClose, date, meal, initialTab }: {
     <FoodAmount food={selectedFood} date={date} meal={meal} onBack={() => setSelectedFood(null)} onLogged={logged} />
   ) : (
     <>
-      <Segmented options={availableTabs.map((candidate) => ({ value: candidate.id, label: candidate.label }))} value={tab} onChange={setTab} className="mb-4 overflow-x-auto" />
+      <Segmented options={availableTabs.map((candidate) => ({ value: candidate.id, label: candidate.label }))} value={tab} onChange={setTab} className="no-scrollbar mb-4 overflow-x-auto" />
       {tab === 'search' && <SearchTab onSelect={setSelectedFood} />}
       {tab === 'library' && <LibraryTab date={date} meal={meal} onLogged={logged} onSelect={setSelectedFood} />}
       {tab === 'barcode' && <BarcodeTab onSelect={setSelectedFood} />}

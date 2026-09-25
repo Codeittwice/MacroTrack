@@ -164,7 +164,7 @@ export function Segmented<T extends string | number>({
           key={String(o.value)}
           onClick={() => onChange(o.value)}
           className={clsx(
-            'flex-1 rounded-lg px-2 py-1.5 text-sm transition',
+            'flex-1 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm transition',
             o.value === value ? 'bg-surface text-text shadow-sm' : 'text-muted hover:text-text',
           )}
         >

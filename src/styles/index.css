@@ -33,3 +33,8 @@ body {
   /* Must stay layered: an unlayered rule here would beat every text-* utility on buttons and inputs. */
   input, select, textarea, button { font: inherit; color: inherit; }
 }
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
