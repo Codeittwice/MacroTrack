@@ -195,6 +195,8 @@ async function fetchSearch(terms: string, limit: number): Promise<FoodItem[]> {
     json: '1',
     page_size: String(Math.min(Math.max(limit, 1), 100)),
     countries_tags: 'netherlands',
+    // Only what offProductToFoodItem reads: ~5% of the full product payload.
+    fields: 'code,product_name,product_name_nl,product_name_en,generic_name,brands,nutriments',
   });
   const data = searchResponseSchema.parse(await fetchJson(`${API_BASE}/cgi/search.pl?${params}`));
   const foods = data.products.map((product) => offProductToFoodItem(product)).filter((food): food is FoodItem => !!food).slice(0, limit);
