@@ -31,8 +31,8 @@ export function useDashboardData() {
   );
 
   const expenditure = useMemo(
-    () => (profile && weights && intake ? currentExpenditure({ profile, weights, intake, previous: tdee, today }) : undefined),
-    [profile, weights, intake, tdee, today],
+    () => (profile && weights && intake ? currentExpenditure({ profile, weights, intake, previous: tdee, previousDate: latestTargetSet?.effectiveFrom, today }) : undefined),
+    [profile, weights, intake, tdee, latestTargetSet?.effectiveFrom, today],
   );
 
   const streak = useMemo(() => {

@@ -19,6 +19,7 @@ export async function prepareCheckIn(profile: Profile, date: DateKey = today()):
     weights: validWeights,
     intake,
     previousExpenditure: previous?.tdee,
+    previousDate: previous?.effectiveFrom,
     currentWeightKg,
     age: ageOn(profile.birthDate, date),
     date,

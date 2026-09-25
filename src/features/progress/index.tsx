@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Card, EmptyState, PageHeader, Segmented, Stat } from '@/components/ui';
 import { TrendChart, type TrendRange } from '@/components/charts/TrendChart';
-import { useProfile, useSettings, useTargets } from '@/app/hooks';
+import { getTargetSetFor, useProfile, useSettings, useTargets } from '@/app/hooks';
 import { getDailyIntake } from '@/lib/log/queries';
 import { averageIntake, adherence, currentExpenditure } from '@/lib/stats';
 import { summarizeTrend, useWeights } from '@/lib/weight/queries';
@@ -19,13 +19,14 @@ export default function ProgressPage() {
   const weights = useWeights();
   const date = today();
   const targets = useTargets(date);
+  const targetSet = useLiveQuery(() => getTargetSetFor(date), [date]);
   const [range, setRange] = useState<TrendRange>('3M');
   const intake = useLiveQuery(
     () => profile ? getDailyIntake(toDateKey(new Date(profile.onboardedAt)), date) : Promise.resolve([]),
     [profile?.onboardedAt, date],
   );
   const trend = useMemo(() => weights ? summarizeTrend(weights) : undefined, [weights]);
-  const expenditure = useMemo(() => profile && weights && intake ? currentExpenditure({ profile, weights, intake, today: date }) : undefined, [profile, weights, intake, date]);
+  const expenditure = useMemo(() => profile && weights && intake ? currentExpenditure({ profile, weights, intake, previous: targetSet?.tdee, previousDate: targetSet?.effectiveFrom, today: date }) : undefined, [profile, weights, intake, targetSet, date]);
   const monthAverage = useMemo(() => intake ? averageIntake(intake, 28, date) : null, [intake, date]);
   const monthAdherence = useMemo(() => intake && targets ? adherence(intake.filter((item) => item.date >= addDays(date, -27)), targets.kcal) : null, [intake, targets, date]);
 

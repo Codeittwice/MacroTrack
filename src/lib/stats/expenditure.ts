@@ -3,7 +3,7 @@
  */
 import type { DateKey, Profile, WeightEntry } from '@/db/types';
 import { estimateExpenditure, targetsFromProfile, trendWeight, type ExpenditureResult } from '@/lib/nutrition';
-import { ageOn, today as todayFn } from '@/lib/utils/date';
+import { ageOn, daysBetween, today as todayFn } from '@/lib/utils/date';
 
 export interface CurrentExpenditureArgs {
   profile: Profile;
@@ -11,8 +11,10 @@ export interface CurrentExpenditureArgs {
   weights: WeightEntry[];
   /** daily intake totals, e.g. from getDailyIntake over the last 60 days */
   intake: { date: DateKey; kcal: number }[];
-  /** latest TargetSet.tdee; when given it is used as the prior instead of the formula TDEE */
+  /** latest TargetSet.tdee: the estimate is smoothed toward it (same semantics as the coach) */
   previous?: number;
+  /** effectiveFrom of that TargetSet; the allowed change grows with the days since then */
+  previousDate?: DateKey;
   /** defaults to today(); used for age */
   today?: DateKey;
 }
@@ -44,14 +46,13 @@ export function currentExpenditure(args: CurrentExpenditureArgs): ExpenditureRes
   const trendWeightKg = trend.length > 0 ? trend[trend.length - 1].value : undefined;
   const weightKg = trendWeightKg ?? latestRawWeightKg(weights) ?? profile.startWeightKg;
 
-  const prior =
-    args.previous !== undefined && Number.isFinite(args.previous) && args.previous > 0
-      ? args.previous
-      : targetsFromProfile(profile, weightKg, ageOn(profile.birthDate, today)).tdee;
+  const prior = targetsFromProfile(profile, weightKg, ageOn(profile.birthDate, today)).tdee;
+  const previous = args.previous !== undefined && Number.isFinite(args.previous) && args.previous > 0 ? args.previous : undefined;
 
   if (trend.length === 0) {
-    return { expenditure: Math.round(prior), confidence: 'low', daysUsed: 0 };
+    return { expenditure: Math.round(previous ?? prior), confidence: 'low', daysUsed: 0 };
   }
 
-  return estimateExpenditure({ intake, trend, prior });
+  const daysSincePrevious = previous !== undefined && args.previousDate ? Math.max(0, daysBetween(args.previousDate, today)) : undefined;
+  return estimateExpenditure({ intake, trend, prior, previous, daysSincePrevious });
 }

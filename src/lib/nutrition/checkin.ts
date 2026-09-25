@@ -17,6 +17,8 @@ export interface ProposeCheckInArgs {
   weights: { date: DateKey; kg: number }[];
   intake: { date: DateKey; kcal: number }[];
   previousExpenditure?: number;
+  /** Date the previous expenditure was set; bounds how far this check-in may move from it. */
+  previousDate?: DateKey;
   currentWeightKg: number;
   age: number;
   date: DateKey;
@@ -56,6 +58,7 @@ export function proposeCheckIn(args: ProposeCheckInArgs): ProposeCheckInResult {
     trend,
     prior,
     previous: previousExpenditure,
+    daysSincePrevious: args.previousDate ? Math.max(0, daysBetween(args.previousDate, date)) : undefined,
   });
 
   const expenditure = est.expenditure;
