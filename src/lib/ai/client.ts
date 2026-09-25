@@ -10,7 +10,7 @@ export interface EstimateMealInput {
 type Fetcher = typeof fetch;
 
 const MODELS: Record<AiProviderId, string> = {
-  claude: 'claude-sonnet-4-20250514',
+  claude: 'claude-haiku-4-5',
   openai: 'gpt-4.1-mini',
   gemini: 'gemini-2.5-flash',
 };
@@ -38,7 +38,8 @@ function prompt(description: string): string {
 async function estimateClaude(apiKey: string, description: string, fetcher: Fetcher): Promise<AiMealEstimate> {
   const response = await fetcher('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    // Direct browser access must be opted into explicitly, or Anthropic rejects the CORS preflight.
+    headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
     body: JSON.stringify({ model: MODELS.claude, max_tokens: 1200, messages: [{ role: 'user', content: prompt(description) }] }),
   });
   await requireOk(response);

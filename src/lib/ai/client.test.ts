@@ -8,7 +8,7 @@ describe('estimateMeal', () => {
   it('uses only the selected Claude key and validates its structured result', async () => {
     const fetcher = vi.fn(async () => response({ content: [{ type: 'text', text: JSON.stringify(ESTIMATE) }] }));
     await expect(estimateMeal({ provider: 'claude', apiKey: 'secret-key', description: 'Bowl of yoghurt' }, fetcher)).resolves.toEqual(ESTIMATE);
-    expect(fetcher).toHaveBeenCalledWith('https://api.anthropic.com/v1/messages', expect.objectContaining({ headers: expect.objectContaining({ 'x-api-key': 'secret-key' }) }));
+    expect(fetcher).toHaveBeenCalledWith('https://api.anthropic.com/v1/messages', expect.objectContaining({ headers: expect.objectContaining({ 'x-api-key': 'secret-key', 'anthropic-dangerous-direct-browser-access': 'true' }) }));
   });
 
   it('parses OpenAI and Gemini response envelopes without accepting malformed output', async () => {
