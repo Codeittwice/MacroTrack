@@ -3,13 +3,13 @@ import type { MealImage } from '@/lib/ai';
 const MAX_EDGE = 1024;
 
 /**
- * Downscales a photo to at most 1024 px on its long edge and re-encodes it as JPEG, so an
+ * Downscales a photo (default 1024 px; labels use 1600 px for legible text) on its long edge and re-encodes it as JPEG, so an
  * estimate costs a fraction of a full-resolution phone photo and stays under provider limits.
  */
-export async function prepareMealPhoto(file: File): Promise<{ image: MealImage; previewUrl: string }> {
+export async function prepareMealPhoto(file: File, maxEdge = MAX_EDGE): Promise<{ image: MealImage; previewUrl: string }> {
   if (!file.type.startsWith('image/')) throw new Error('Choose an image file.');
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);

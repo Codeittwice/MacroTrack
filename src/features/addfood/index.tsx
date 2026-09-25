@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Clock3, Heart, Plus, Search, Star, Trash2, Zap } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Clock3, Heart, Plus, ScanText, Search, Star, Trash2, Zap } from 'lucide-react';
 import { Button, Input, Label, NumberInput, Segmented, Sheet, SourceBadge } from '@/components/ui';
 import { useSettings } from '@/app/hooks';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -17,6 +17,8 @@ import { fmtG, fmtKcal } from './format';
 import { useAddFoodTabs } from './registry';
 import { BarcodeTab } from './BarcodeTab';
 import { AiEstimateTab } from './AiEstimateTab';
+import { readNutritionLabel, type LabelReading } from '@/lib/ai';
+import { prepareMealPhoto } from './mealPhoto';
 
 type BuiltInTab = 'search' | 'library' | 'barcode' | 'ai' | 'quick' | 'new';
 type SheetTab = BuiltInTab | string;
@@ -279,10 +281,25 @@ function NewFoodTab({ onSelect }: { onSelect: (food: FoodItem) => void }) {
   const [servingLabel, setServingLabel] = useState('');
   const [servingGrams, setServingGrams] = useState<number | undefined>();
   const [saving, setSaving] = useState(false);
+  // Micronutrients read from a label; the form doesn't edit them but saves them with the food.
+  const [labelExtras, setLabelExtras] = useState<Partial<Nutrients>>({});
+  const fillFromLabel = (r: LabelReading) => {
+    if (r.name) setName(r.name);
+    if (r.brand) setBrand(r.brand);
+    setUnit(r.unit);
+    setKcal(r.per100.kcal);
+    setProtein(r.per100.protein);
+    setCarbs(r.per100.carbs);
+    setFat(r.per100.fat);
+    const { fiber, sugar, satFat, salt, sodium } = r.per100;
+    setLabelExtras({ fiber, sugar, satFat, salt, sodium });
+    if (r.serving) { setServingLabel(r.serving.label); setServingGrams(r.serving.grams); }
+  };
   const canSave = name.trim().length > 0 && validNumber(kcal) && validNumber(protein) && validNumber(carbs) && validNumber(fat) && (!servingLabel.trim() || validNumber(servingGrams));
 
   return (
     <div className="flex flex-col gap-4">
+      <LabelScanner onRead={fillFromLabel} />
       <div><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Food name" autoFocus /></div>
       <div><Label hint="Optional">Brand</Label><Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Albert Heijn" /></div>
       <div><Label>Unit</Label><Segmented options={[{ value: 'g', label: 'Grams' }, { value: 'ml', label: 'Millilitres' }]} value={unit} onChange={setUnit} /></div>
@@ -310,7 +327,7 @@ function NewFoodTab({ onSelect }: { onSelect: (food: FoodItem) => void }) {
           if (!canSave || !validNumber(kcal) || !validNumber(protein) || !validNumber(carbs) || !validNumber(fat)) return;
           setSaving(true);
           try {
-            const per100: Nutrients = { kcal, protein, carbs, fat };
+            const per100: Nutrients = { ...stripUndefined(labelExtras), kcal, protein, carbs, fat };
             const food = await createCustomFood({
               name,
               brand: brand.trim() || undefined,
@@ -458,3 +475,37 @@ export function FoodDetailSheet({ open, onClose, entry, date, meal, onDone }: {
 }
 
 export { registerAddFoodTab, unregisterAddFoodTab, useAddFoodTabs } from './registry';
+
+function stripUndefined<T extends object>(o: T): Partial<T> {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
+
+/** Photo of a nutrition table -> prefilled custom food. The numbers are always reviewed before saving. */
+function LabelScanner({ onRead }: { onRead: (r: LabelReading) => void }) {
+  const settings = useSettings();
+  const apiKey = settings.apiKeys[settings.aiProvider];
+  const input = useRef<HTMLInputElement>(null);
+  const [state, setState] = useState<{ busy: boolean; message?: string; ok?: boolean }>({ busy: false });
+  const scan = async (file: File | undefined) => {
+    if (!file || !apiKey) return;
+    setState({ busy: true });
+    try {
+      const { image } = await prepareMealPhoto(file, 1600);
+      onRead(await readNutritionLabel({ provider: settings.aiProvider, apiKey, image }));
+      setState({ busy: false, ok: true, message: 'Filled in from the label. Check the numbers before saving.' });
+    } catch (error) {
+      setState({ busy: false, ok: false, message: error instanceof Error ? error.message : "The label couldn't be read." });
+    }
+  };
+  return (
+    <div className="rounded-xl bg-surface-2 p-3">
+      <input ref={input} type="file" accept="image/*" capture="environment" className="hidden" aria-label="Nutrition label photo" onChange={(e) => { void scan(e.target.files?.[0]); e.target.value = ''; }} />
+      <Button variant="secondary" className="w-full" disabled={!apiKey || state.busy} onClick={() => input.current?.click()}>
+        <ScanText size={18} /> {state.busy ? 'Reading label…' : 'Scan a nutrition label'}
+      </Button>
+      <p className="mt-2 text-xs" style={state.message ? { color: state.ok ? 'var(--success)' : 'var(--danger)' } : undefined}>
+        {state.message ?? (apiKey ? 'Photograph the "Voedingswaarde" table and the form fills itself in.' : 'Add an AI key in Settings to scan labels.')}
+      </p>
+    </div>
+  );
+}
