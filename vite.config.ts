@@ -11,7 +11,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg'],
+      // Registered from main.tsx only in the browser: inside Capacitor/Tauri the bundle ships with the
+      // app, and a service worker would keep serving the previous version after an update.
+      injectRegister: null,
+      includeAssets: ['icon.svg', 'icons/*.png'],
       workbox: { globPatterns: ['**/*.{js,css,html,svg,png,json}'], maximumFileSizeToCacheInBytes: 8 * 1024 * 1024 },
       manifest: {
         name: 'MacroTrack',
@@ -20,7 +23,12 @@ export default defineConfig({
         theme_color: '#0F1115',
         background_color: '#0F1115',
         display: 'standalone',
-        icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
+        icons: [
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        ],
       },
     }),
   ],

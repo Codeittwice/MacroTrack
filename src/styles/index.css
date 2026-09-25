@@ -29,4 +29,7 @@ body {
   font-variant-numeric: tabular-nums;
   -webkit-tap-highlight-color: transparent;
 }
-input, select, textarea, button { font: inherit; color: inherit; }
+@layer base {
+  /* Must stay layered: an unlayered rule here would beat every text-* utility on buttons and inputs. */
+  input, select, textarea, button { font: inherit; color: inherit; }
+}
