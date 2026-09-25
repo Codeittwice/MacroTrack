@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { Input, Label, Segmented } from '@/components/ui';
+import { Button, Input, Label, Segmented } from '@/components/ui';
+import { estimateMeal } from '@/lib/ai';
 import { Section } from './Section';
 import { useSettings } from '@/app/hooks';
 import { updateSettings } from '@/db/repo';
@@ -65,8 +66,31 @@ export function AiSection() {
       {PROVIDERS.map((p) => (
         <ApiKeyField key={p.value} label={p.label} value={settings.apiKeys[p.value]} onSave={(v) => saveKey(p.value, v)} />
       ))}
-      {/* TODO(ai-team): add a "Test key" button per provider here once the AI client is wired up. No network calls belong in this file yet. */}
+      <TestKey provider={settings.aiProvider} apiKey={settings.apiKeys[settings.aiProvider]} />
       <p className="text-xs text-muted">Keys are stored only on this device and are sent only to the provider you choose.</p>
     </Section>
+  );
+}
+
+/** Sends one tiny estimate ("1 banana") to the selected provider so the user knows the key works. */
+function TestKey({ provider, apiKey }: { provider: AiProviderId; apiKey: string | undefined }) {
+  const [state, setState] = useState<{ busy: boolean; message?: string; ok?: boolean }>({ busy: false });
+  useEffect(() => setState({ busy: false }), [provider, apiKey]);
+  const name = PROVIDERS.find((p) => p.value === provider)?.label ?? provider;
+  const run = async () => {
+    setState({ busy: true });
+    try {
+      const result = await estimateMeal({ provider, apiKey: apiKey ?? '', description: '1 banana' });
+      const kcal = Math.round(result.items.reduce((sum, item) => sum + item.nutrients.kcal, 0));
+      setState({ busy: false, ok: true, message: `${name} works: 1 banana is about ${kcal} kcal.` });
+    } catch (error) {
+      setState({ busy: false, ok: false, message: error instanceof Error ? error.message : 'The key could not be verified.' });
+    }
+  };
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-3">
+      <Button size="sm" disabled={!apiKey || state.busy} onClick={() => void run()}>{state.busy ? 'Testing…' : `Test ${name} key`}</Button>
+      {state.message && <span role="status" className="text-sm" style={{ color: state.ok ? 'var(--success)' : 'var(--danger)' }}>{state.message}</span>}
+    </div>
   );
 }

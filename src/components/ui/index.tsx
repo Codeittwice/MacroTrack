@@ -248,17 +248,19 @@ export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; ti
   );
 }
 
-export const SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
-  nevo: { label: 'NEVO', cls: 'bg-indigo-500/15 text-indigo-400' },
-  off: { label: 'OFF', cls: 'bg-green-500/15 text-green-400' },
-  ah: { label: 'AH', cls: 'bg-sky-500/15 text-sky-400' },
-  user: { label: 'Mine', cls: 'bg-surface-2 text-muted' },
-  recipe: { label: 'Recipe', cls: 'bg-amber-500/15 text-amber-400' },
-  ai: { label: 'AI estimate', cls: 'bg-violet-500/15 text-violet-400' },
-  quick: { label: 'Quick', cls: 'bg-surface-2 text-muted' },
+/** Source badges tint with theme tokens so they stay legible in both light and dark mode. */
+const tint = (token: string) => ({ background: `color-mix(in srgb, var(${token}) 16%, transparent)`, color: `var(${token})` });
+export const SOURCE_BADGE: Record<string, { label: string; style?: { background: string; color: string } }> = {
+  nevo: { label: 'NEVO', style: tint('--carbs') },
+  off: { label: 'OFF', style: tint('--primary') },
+  ah: { label: 'AH', style: tint('--carbs') },
+  user: { label: 'Mine' },
+  recipe: { label: 'Recipe', style: tint('--fat') },
+  ai: { label: 'AI estimate', style: tint('--kcal') },
+  quick: { label: 'Quick' },
 };
 
 export function SourceBadge({ source }: { source: string }) {
   const b = SOURCE_BADGE[source] ?? SOURCE_BADGE.user;
-  return <span className={clsx('rounded px-1.5 py-0.5 text-[10px] font-medium', b.cls)}>{b.label}</span>;
+  return <span className={clsx('rounded px-1.5 py-0.5 text-[10px] font-medium', !b.style && 'bg-surface-2 text-muted')} style={b.style}>{b.label}</span>;
 }
