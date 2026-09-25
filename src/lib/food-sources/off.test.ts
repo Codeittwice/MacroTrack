@@ -37,7 +37,7 @@ describe('offProductToFoodItem', () => {
       nameEn: 'Test yogurt',
       brand: 'Test brand',
       barcode: '8710000000012',
-      per100: { kcal: 62, protein: 4.5, carbs: 5.2, fat: 2.1, fiber: 0.3, sugar: 5.1, satFat: 1.3, sodium: 0.04, salt: 0.1 },
+      per100: { kcal: 62, protein: 4.5, carbs: 5.2, fat: 2.1, fiber: 0.3, sugar: 5.1, satFat: 1.3, sodium: 40, salt: 0.1 },
     });
     expect(food.servings).toEqual([{ label: '100 g', grams: 100 }]);
   });
@@ -99,5 +99,13 @@ describe('OFF rate limiting', () => {
     for (let i = 0; i < 20; i++) await offSource.search(`product ${i}`);
     expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(8);
     vi.unstubAllGlobals();
+  });
+});
+
+describe('OFF servings', () => {
+  it('adds the printed portion before 100 g and ignores nonsense', () => {
+    const base = { code: '8718907976695', product_name: 'Turks brood', nutriments: { 'energy-kcal_100g': 262 } };
+    expect(offProductToFoodItem({ ...base, serving_size: '1 broodje (90 g)', serving_quantity: '90' } as never)!.servings).toEqual([{ label: '1 broodje (90 g)', grams: 90 }, { label: '100 g', grams: 100 }]);
+    expect(offProductToFoodItem({ ...base, serving_quantity: 0 } as never)!.servings).toEqual([{ label: '100 g', grams: 100 }]);
   });
 });

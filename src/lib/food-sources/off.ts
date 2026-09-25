@@ -20,6 +20,8 @@ const productSchema = z.object({
   product_name_en: nullableText,
   generic_name: nullableText,
   brands: nullableText,
+  serving_size: nullableText,
+  serving_quantity: z.union([z.number(), z.string()]).nullish().transform((v) => (v === null || v === undefined || v === '' ? undefined : Number(v))),
   nutriments: z.record(z.string(), z.unknown()).nullish().transform((value) => value ?? undefined),
 }).passthrough();
 
@@ -58,7 +60,8 @@ function nutrientsFromProduct(product: OffProduct): Nutrients {
     ['fiber', nutrients.fiber_100g],
     ['sugar', nutrients.sugars_100g],
     ['satFat', nutrients['saturated-fat_100g']],
-    ['sodium', nutrients.sodium_100g],
+    // OFF reports sodium in g per 100 g; the app stores mg (see Nutrients.sodium).
+    ['sodium', asNumber(nutrients.sodium_100g) === undefined ? undefined : asNumber(nutrients.sodium_100g)! * 1000],
     ['salt', nutrients.salt_100g],
   ];
   for (const [key, value] of optional) {
@@ -83,8 +86,20 @@ export function offProductToFoodItem(product: OffProduct, fallbackBarcode?: stri
     barcode,
     per100: nutrientsFromProduct(product),
     unit: 'g',
-    servings: [{ label: '100 g', grams: 100 }],
+    servings: servingsFromProduct(product),
   };
+}
+
+/** "1 broodje (90 g)" style portion from OFF when it is sane, then 100 g. */
+function servingsFromProduct(product: OffProduct): FoodItem['servings'] {
+  const grams = product.serving_quantity === undefined ? undefined : Number(product.serving_quantity);
+  const servings: FoodItem['servings'] = [];
+  if (grams !== undefined && Number.isFinite(grams) && grams > 0 && grams <= 2000 && grams !== 100) {
+    const label = (product.serving_size ?? '').trim();
+    servings.push({ label: label && label.length <= 40 ? label : `1 portion (${Math.round(grams)} g)`, grams });
+  }
+  servings.push({ label: '100 g', grams: 100 });
+  return servings;
 }
 
 function storedToFoodItem(row: StoredFood): FoodItem {
@@ -196,7 +211,7 @@ async function fetchSearch(terms: string, limit: number): Promise<FoodItem[]> {
     page_size: String(Math.min(Math.max(limit, 1), 100)),
     countries_tags: 'netherlands',
     // Only what offProductToFoodItem reads: ~5% of the full product payload.
-    fields: 'code,product_name,product_name_nl,product_name_en,generic_name,brands,nutriments',
+    fields: 'code,product_name,product_name_nl,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity',
   });
   const data = searchResponseSchema.parse(await fetchJson(`${API_BASE}/cgi/search.pl?${params}`));
   const foods = data.products.map((product) => offProductToFoodItem(product)).filter((food): food is FoodItem => !!food).slice(0, limit);
