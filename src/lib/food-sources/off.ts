@@ -246,16 +246,14 @@ export function __resetOffSearchStateForTest(): void {
 }
 
 async function getOffByBarcode(barcode: string): Promise<FoodItem | undefined> {
-  const cached = await cachedOffByBarcode(barcode);
-  if (cached) return cached;
-
+  // Network first so product corrections reach the cache; the cache covers offline scans.
   try {
     const data = barcodeResponseSchema.parse(await fetchJson(`${API_BASE}/api/v2/product/${encodeURIComponent(barcode)}.json`));
     const food = data.product ? offProductToFoodItem(data.product, barcode) : undefined;
     if (food) await cacheOffFood(food);
-    return food;
+    return food ?? (await cachedOffByBarcode(barcode));
   } catch {
-    return undefined;
+    return cachedOffByBarcode(barcode);
   }
 }
 

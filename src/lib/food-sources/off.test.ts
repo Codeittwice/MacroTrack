@@ -68,15 +68,14 @@ describe('offSource', () => {
     expect(results.map((item) => item.id)).toContain(food.id);
   });
 
-  it('resolves a barcode once online, then from cache without another request', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ product: PRODUCT }), { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
-
+  it('resolves a barcode online, then from the cache when offline', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ product: PRODUCT }), { status: 200 })));
     const first = await offSource.getByBarcode!('8710000000012');
-    const second = await offSource.getByBarcode!('8710000000012');
     expect(first?.id).toBe('off:8710000000012');
-    expect(second?.id).toBe(first?.id);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    const offline = await offSource.getByBarcode!('8710000000012');
+    expect(offline?.id).toBe(first?.id);
   });
 });
 
