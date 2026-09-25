@@ -54,6 +54,8 @@ export function useDashboardData() {
   const goalEta = useMemo(() => {
     if (!profile || profile.goalWeightKg === undefined || !trend) return undefined;
     if (trend.latestTrendKg === undefined) return undefined;
+    // A rate needs about a week of trend; before that "not trending" would be misleading.
+    if (trend.trend.length < 7) return 'learning' as const;
     return projectGoalDate(trend.latestTrendKg, profile.goalWeightKg, trend.weeklyRateKg, today);
   }, [profile, trend, today]);
 

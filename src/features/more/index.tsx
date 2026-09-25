@@ -14,7 +14,7 @@ const ITEMS = [
 
 export default function MorePage() {
   return (
-    <>
+    <div className="mx-auto max-w-2xl">
       <PageHeader title="More" />
       <div className="overflow-hidden rounded-2xl bg-surface">
         {ITEMS.map(({ to, label, icon: Icon }) => (
@@ -25,6 +25,6 @@ export default function MorePage() {
           </Link>
         ))}
       </div>
-    </>
+    </div>
   );
 }

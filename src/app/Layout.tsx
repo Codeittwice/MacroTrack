@@ -33,7 +33,7 @@ export function Layout() {
       </aside>
 
       <main className="flex-1 overflow-y-auto pb-24 md:pb-8">
-        <div className="mx-auto w-full max-w-3xl px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-8 md:pt-8">
+        <div className="mx-auto w-full max-w-5xl px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-8 md:pt-8">
           <Outlet />
         </div>
       </main>

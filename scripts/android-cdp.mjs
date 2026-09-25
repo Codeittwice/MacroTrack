@@ -2,7 +2,8 @@
 // Setup: adb forward tcp:9333 localabstract:webview_devtools_remote_$(adb shell pidof nl.macrotrack.app)
 // Usage: node scripts/android-cdp.mjs "await go('/settings'); return text().slice(0, 200);"
 // Helpers available in the snippet: sleep, btn, click(name), setVal(el, v), q(selector), text(), go(path).
-const list = await (await fetch('http://localhost:9333/json/list')).json();
+const port = process.env.CDP_PORT ?? '9333'; // WebView2 (Tauri desktop): launch with WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9224
+const list = (await (await fetch(`http://localhost:${port}/json/list`)).json()).filter((t) => t.type === 'page');
 const ws = new WebSocket(list[0].webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener('open', r, { once: true }));
 const expression = `(async () => {

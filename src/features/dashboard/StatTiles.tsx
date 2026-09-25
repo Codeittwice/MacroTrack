@@ -72,6 +72,8 @@ export function StatTiles({
           <div className="text-sm text-muted">No goal weight set</div>
         ) : goalEta === undefined ? (
           <div className="text-lg font-semibold text-muted">—</div>
+        ) : goalEta === 'learning' ? (
+          <div className="text-sm text-muted">Weigh in for a week to see a date</div>
         ) : goalEta === null ? (
           <div className="text-sm text-muted">Not trending toward goal</div>
         ) : goalEta === today ? (
