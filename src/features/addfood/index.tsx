@@ -10,6 +10,7 @@ import { createCustomFood, toggleFavorite } from '@/lib/foods';
 import { useFavoriteFoods, useFrequentFoods, useIsFavorite, useRecentFoods } from '@/lib/foods/hooks';
 import { addLogEntry, deleteLogEntry, quickAdd, moveLogEntry, updateLogEntryGrams } from '@/lib/log/actions';
 import { searchFoods } from '@/lib/food-sources/search';
+import { offSearchStatus } from '@/lib/food-sources/off';
 import { scale } from '@/lib/utils/nutrients';
 import { logSavedMeal } from '@/lib/recipes/actions';
 import { fmtG, fmtKcal } from './format';
@@ -171,7 +172,7 @@ function SearchTab({ onSelect }: { onSelect: (food: FoodItem) => void }) {
     let active = true;
     const timer = window.setTimeout(() => {
       searchFoods(query).then((foods) => active && setResults(foods)).catch(() => active && setResults([]));
-    }, query.trim() ? 180 : 0);
+    }, query.trim() ? 350 : 0);
     return () => {
       active = false;
       window.clearTimeout(timer);
@@ -187,6 +188,13 @@ function SearchTab({ onSelect }: { onSelect: (food: FoodItem) => void }) {
       {results === undefined && <div className="py-8 text-center text-sm text-muted">Searching…</div>}
       {results?.length === 0 && <div className="py-8 text-center text-sm text-muted">No foods found. Create one or use Quick add.</div>}
       {results && results.length > 0 && <div className="divide-y divide-border">{results.map((food) => <FoodRow key={food.id} food={food} onSelect={onSelect} />)}</div>}
+      {results !== undefined && query.trim().length >= 3 && offSearchStatus() !== 'ok' && (
+        <p className="pt-3 text-center text-xs text-muted">
+          {offSearchStatus() === 'offline'
+            ? "You're offline, so branded products you haven't looked up before can't be found."
+            : 'Online product search is busy. Showing saved foods only; try again in a minute.'}
+        </p>
+      )}
     </div>
   );
 }

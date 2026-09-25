@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/db/schema';
-import { cacheOffFood, offProductToFoodItem, offSource } from './off';
+import { __resetOffSearchStateForTest, cacheOffFood, offProductToFoodItem, offSearchTerms, offSource } from './off';
 
 const PRODUCT = {
   code: '8710000000012',
@@ -21,6 +21,7 @@ const PRODUCT = {
 };
 
 beforeEach(async () => {
+  __resetOffSearchStateForTest();
   await db.foods.clear();
 });
 
@@ -76,5 +77,27 @@ describe('offSource', () => {
     expect(first?.id).toBe('off:8710000000012');
     expect(second?.id).toBe(first?.id);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('offSearchTerms', () => {
+  it('turns Dutch plurals, adjectives and shop prefixes into OFF search terms', () => {
+    expect(offSearchTerms('AH turkse broodjes')).toEqual({ terms: 'turks brood albert heijn', withoutBrand: 'turks brood' });
+    expect(offSearchTerms('jumbo pindakaas')).toEqual({ terms: 'pindakaas jumbo', withoutBrand: 'pindakaas' });
+    expect(offSearchTerms('kipfilet')).toEqual({ terms: 'kipfilet', withoutBrand: 'kipfilet' });
+    expect(offSearchTerms('chocolademousse').withoutBrand).toBe('chocolademousse');
+  });
+});
+
+describe('OFF rate limiting', () => {
+  it('serves repeated queries from memory and stops calling the API past the budget', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ products: [] }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await offSource.search('yoghurt');
+    await offSource.search('yoghurt');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < 20; i++) await offSource.search(`product ${i}`);
+    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(8);
+    vi.unstubAllGlobals();
   });
 });

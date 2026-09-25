@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { db } from '@/db/schema';
 import { alive } from '@/db/repo';
 import type { FoodItem, FoodSource, Nutrients, StoredFood } from '@/db/types';
-import { normalizeText } from './normalize';
+import { normalizeQuery, normalizeText } from './normalize';
 
 const API_BASE = 'https://nl.openfoodfacts.org';
 
@@ -141,27 +141,91 @@ async function fetchJson(url: string): Promise<unknown> {
   return response.json();
 }
 
+const BRAND_NAMES: Record<string, string> = { ah: 'albert heijn', 'albert heijn': 'albert heijn', jumbo: 'jumbo', lidl: 'lidl', aldi: 'aldi', plus: 'plus' };
+
+/**
+ * Turns a typed query into Open Food Facts search terms. OFF does literal full-text matching, so
+ * Dutch diminutive plurals and inflected adjectives ("turkse broodjes") must become their base
+ * form ("turks brood"), and a shop prefix becomes the brand name OFF stores ("albert heijn").
+ */
+export function offSearchTerms(query: string): { terms: string; withoutBrand: string } {
+  const { text, brand } = normalizeQuery(query);
+  const base = text.split(' ').filter(Boolean).map((word) => {
+    if (word.length > 6 && word.endsWith('tjes')) return word.slice(0, -4);
+    if (word.length > 5 && word.endsWith('jes')) return word.slice(0, -3);
+    if (word.length > 5 && /[kndl]se$/.test(word)) return word.slice(0, -1); // turkse, franse, hollandse, engelse
+    return word;
+  }).join(' ');
+  const brandName = brand ? BRAND_NAMES[brand] ?? brand : undefined;
+  return { terms: brandName ? `${base} ${brandName}` : base, withoutBrand: base };
+}
+
+/** OFF allows ~10 searches a minute; stay under it and serve repeats from memory. */
+const SEARCH_BUDGET_PER_MINUTE = 8;
+const QUERY_CACHE_MS = 10 * 60_000;
+const recentSearches: number[] = [];
+
+export type OffSearchStatus = 'ok' | 'limited' | 'offline';
+let lastStatus: OffSearchStatus = 'ok';
+/** Outcome of the most recent online search, so the UI can explain missing branded results. */
+export function offSearchStatus(): OffSearchStatus {
+  return lastStatus;
+}
+const queryCache = new Map<string, { at: number; foods: FoodItem[] }>();
+
+function takeSearchSlot(): boolean {
+  const now = Date.now();
+  while (recentSearches.length && now - recentSearches[0] > 60_000) recentSearches.shift();
+  if (recentSearches.length >= SEARCH_BUDGET_PER_MINUTE) return false;
+  recentSearches.push(now);
+  return true;
+}
+
+async function fetchSearch(terms: string, limit: number): Promise<FoodItem[]> {
+  const cached = queryCache.get(terms);
+  if (cached && Date.now() - cached.at < QUERY_CACHE_MS) return cached.foods;
+  if (!takeSearchSlot()) {
+    lastStatus = 'limited';
+    throw new Error('Open Food Facts search budget exhausted');
+  }
+  const params = new URLSearchParams({
+    search_terms: terms,
+    search_simple: '1',
+    action: 'process',
+    json: '1',
+    page_size: String(Math.min(Math.max(limit, 1), 100)),
+    countries_tags: 'netherlands',
+  });
+  const data = searchResponseSchema.parse(await fetchJson(`${API_BASE}/cgi/search.pl?${params}`));
+  const foods = data.products.map((product) => offProductToFoodItem(product)).filter((food): food is FoodItem => !!food).slice(0, limit);
+  queryCache.set(terms, { at: Date.now(), foods });
+  await Promise.all(foods.map(cacheOffFood));
+  return foods;
+}
+
 async function searchOff(query: string, limit = 25): Promise<FoodItem[]> {
-  const term = query.trim();
-  if (!term) return [];
+  const { terms, withoutBrand } = offSearchTerms(query);
+  if (withoutBrand.length < 3) return cachedOffSearch(query.trim(), limit);
 
   try {
-    const params = new URLSearchParams({
-      search_terms: term,
-      search_simple: '1',
-      action: 'process',
-      json: '1',
-      page_size: String(Math.min(Math.max(limit, 1), 100)),
-      countries_tags: 'netherlands',
-    });
-    const data = searchResponseSchema.parse(await fetchJson(`${API_BASE}/cgi/search.pl?${params}`));
-    const foods = data.products.map((product) => offProductToFoodItem(product)).filter((food): food is FoodItem => !!food).slice(0, limit);
-    await Promise.all(foods.map(cacheOffFood));
+    let foods = await fetchSearch(terms, limit);
+    // A brand we mapped wrongly shouldn't hide every product; retry on the product words alone.
+    if (foods.length === 0 && terms !== withoutBrand) foods = await fetchSearch(withoutBrand, limit);
+    lastStatus = 'ok';
     return foods;
   } catch {
-    // A local-first app should still find previously seen branded products while offline.
-    return cachedOffSearch(term, limit);
+    // The API answers bursts with 429s that browsers surface as opaque network errors.
+    if (lastStatus !== 'limited') lastStatus = typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : 'limited';
+    // A local-first app should still find previously seen branded products while offline or throttled.
+    return cachedOffSearch(withoutBrand, limit);
   }
+}
+
+/** Test hook: forget the rate-limit window and query cache. */
+export function __resetOffSearchStateForTest(): void {
+  lastStatus = 'ok';
+  recentSearches.length = 0;
+  queryCache.clear();
 }
 
 async function getOffByBarcode(barcode: string): Promise<FoodItem | undefined> {
