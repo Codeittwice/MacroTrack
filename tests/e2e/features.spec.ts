@@ -118,3 +118,16 @@ test('switching to light theme and pounds is reflected across the app', async ({
   await page.goto('/weight');
   await expect(page.getByText(/lb/).first()).toBeVisible();
 });
+
+test('imports weight and calorie history from another app', async ({ page }) => {
+  await seed(page, 2);
+  await page.goto('/extras/backup');
+  const csv = ['Date,Weight (kg),Calories (kcal),Protein (g),Carbs (g),Fat (g)', '2026-01-05,90.2,2400,150,260,80', '2026-01-06,89.9,2300,140,250,78'].join('\n');
+  await page.getByLabel('History file').setInputFiles({ name: 'macrofactor-export.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await expect(page.getByText(/Found 2 weigh-ins and 2 days of food/)).toBeVisible();
+  await expect(page.getByLabel('Source name')).toHaveValue('MacroFactor');
+  await page.getByRole('button', { name: 'Import history' }).click();
+  await expect(page.getByText('Imported 2 weigh-ins and 2 days of food.', { exact: false })).toBeVisible();
+  await page.goto('/log/2026-01-05');
+  await expect(page.getByText('MacroFactor · daily total')).toBeVisible();
+});
