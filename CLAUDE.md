@@ -21,8 +21,9 @@ Data is local-first in IndexedDB (Dexie). The approved plan is in `C:\Users\2024
 - Macro colours: protein = `--protein`, carbs = `--carbs`, fat = `--fat`, calories = `--kcal`.
 - Each feature is a folder in `src/features/<name>/` whose default export in `index.tsx` is the page.
 
-## Agent-army rules
-- The Fable/Opus commander runs the waves. Opus leads own workstreams; Sonnet implementers do bounded tasks.
-- Waves run one after another. Within a wave, file ownership is strictly disjoint.
-- **Only the wave integrator edits these files:** `package.json`, `vite.config.ts`, `src/app/routes.tsx`, `src/app/hooks.ts`, `src/db/schema.ts`, `src/db/types.ts`, `src/components/ui/index.tsx`, `capacitor.config.ts` and `src-tauri/**`. Workers report the changes they need under "Flags for Commander".
-- Workers never certify their own work. A report needs a green `npm run build` and the names of the passing tests.
+## Working rules
+- Read `docs/CLAUDE_HANDOFF.md` first. Claude and Codex both work on this repo, and the handoff doc is the shared status log, so update it when you stop.
+- Keep token use lean: do the work inline. Use at most one or two Sonnet agents for large independent chunks. No multi-layer agent armies (they exhausted the budget once).
+- Gate every change with `npm run build`, `npm test` and `npm run e2e`. For native changes, also build the APK or desktop app.
+- Unit tests must not touch the network (`tests/setup.ts` blocks `fetch`); stub it per test.
+- Never register the service worker inside Capacitor/Tauri (see `src/main.tsx`).
