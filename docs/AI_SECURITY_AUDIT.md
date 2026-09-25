@@ -30,3 +30,9 @@ The client-side provider adapters in `src/lib/ai/client.ts`, settings key storag
 `npm run eval:ai` is offline and uses `data/fixtures/ai-eval.json`. It contains 30 portion-specified Dutch meal/product scenarios with declared reference totals, a representative raw estimate, and a grounded estimate. The command rejects a corpus smaller than 30 examples or a grounded result that does not improve calorie and protein MAPE over the raw estimates.
 
 The fixture corpus is a regression benchmark, not a substitute for an evaluation using a user-owned provider key and licensed NEVO data. Re-run the evaluation with real model responses once those external prerequisites are available.
+
+## Meal photos (added 2026-09-25)
+
+- A photo is only sent when the user picks one and presses Estimate. It goes to the selected provider only, in the same request as the description.
+- Photos are downscaled on the device to at most 1024 px (JPEG) before sending. They are never stored by MacroTrack.
+- Photo requests use the provider's vision model (Claude Sonnet 5); text-only requests use Claude Haiku 4.5.
