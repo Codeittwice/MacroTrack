@@ -132,6 +132,9 @@ export function RangePicker({
         max={max}
         step={step}
         value={current}
+        onFocus={() => {
+          if (value === undefined) onValue(current);
+        }}
         onPointerDown={() => {
           if (value === undefined) onValue(current);
         }}

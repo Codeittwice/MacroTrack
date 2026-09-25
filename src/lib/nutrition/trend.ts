@@ -31,16 +31,24 @@ function median(values: number[]): number {
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
+/** Neighbours further apart than this (in days) don't vouch for or against a reading. */
+const OUTLIER_WINDOW_DAYS = 10;
+
 /**
  * Keeps the underlying history intact while excluding implausible one-day averages from the trend.
- * A point needs at least three nearby weigh-in days and must sit more than 3 kg from the robust
- * median of up to three neighbours either side. Sustained changes retain enough support to pass.
+ * A reading is dropped only when it is contradicted on BOTH sides: it needs nearby weigh-ins (within
+ * 10 days) before and after it, at least three in total, and must sit more than max(3 kg, 3%) from
+ * their median. The newest reading and the first reading after a break are therefore never dropped,
+ * and sustained changes keep their support.
  */
 export function excludeWeightOutliers(known: { date: DateKey; kg: number }[]): { date: DateKey; kg: number }[] {
   return known.filter((point, index) => {
-    const neighbours = known.slice(Math.max(0, index - 3), index).concat(known.slice(index + 1, index + 4));
-    if (neighbours.length < 3) return true;
-    return Math.abs(point.kg - median(neighbours.map((neighbour) => neighbour.kg))) <= 3;
+    const near = (other: { date: DateKey }) => Math.abs(daysBetween(point.date, other.date)) <= OUTLIER_WINDOW_DAYS;
+    const before = known.slice(Math.max(0, index - 3), index).filter(near);
+    const after = known.slice(index + 1, index + 4).filter(near);
+    if (before.length === 0 || after.length === 0 || before.length + after.length < 3) return true;
+    const mid = median([...before, ...after].map((neighbour) => neighbour.kg));
+    return Math.abs(point.kg - mid) <= Math.max(3, mid * 0.03);
   });
 }
 

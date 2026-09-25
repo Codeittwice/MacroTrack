@@ -113,6 +113,22 @@ describe('trendWeight', () => {
     const known = Array.from({ length: 8 }, (_, index) => ({ date: addDays('2026-05-01', index), kg: index < 4 ? 80 : 84 }));
     expect(excludeWeightOutliers(known)).toHaveLength(8);
   });
+
+  it('never drops the newest reading, even after a big change', () => {
+    const known = [80, 80, 80, 80].map((kg, index) => ({ date: addDays('2026-06-01', index), kg })).concat({ date: '2026-06-05', kg: 85 });
+    expect(excludeWeightOutliers(known).at(-1)?.kg).toBe(85);
+  });
+
+  it('keeps the first reading after a long break', () => {
+    const before = [90, 90, 90].map((kg, index) => ({ date: addDays('2026-01-01', index), kg }));
+    const after = [85, 85.2, 84.8].map((kg, index) => ({ date: addDays('2026-03-01', index), kg }));
+    expect(excludeWeightOutliers([...before, ...after])).toHaveLength(6);
+  });
+
+  it('scales the tolerance with body weight', () => {
+    const known = [140, 140, 140, 143.8, 140, 140, 140].map((kg, index) => ({ date: addDays('2026-07-01', index), kg }));
+    expect(excludeWeightOutliers(known)).toHaveLength(7);
+  });
 });
 
 describe('weeklyRate', () => {

@@ -6,10 +6,10 @@ async function completeOnboarding(page: Page) {
 
   await page.getByRole('button', { name: 'Male', exact: true }).click();
   await page.locator('input[type="date"]').fill('1990-06-15');
-  await page.getByPlaceholder('e.g. 175').fill('175');
+  await page.getByRole('slider', { name: 'Height' }).fill('176');
   await page.getByRole('button', { name: 'Next' }).click();
 
-  await page.getByPlaceholder('e.g. 80').fill('80');
+  await page.getByRole('slider', { name: 'Weight' }).fill('80');
   await page.getByRole('button', { name: 'Next' }).click();
 
   await page.getByRole('button', { name: 'Moderately active' }).click();
