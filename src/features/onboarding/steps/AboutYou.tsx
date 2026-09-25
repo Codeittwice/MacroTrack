@@ -1,4 +1,4 @@
-import { Label, Segmented, NumberInput, Input } from '@/components/ui';
+import { Label, Segmented, RangePicker, Input } from '@/components/ui';
 import type { WizardData } from '../wizardState';
 import { cmToFtIn } from '../wizardState';
 import { ageErrorMsg, heightErrorMsg } from '../validation';
@@ -39,7 +39,15 @@ export default function AboutYou({ data, onChange }: { data: WizardData; onChang
         <Label hint={heightErr ? <span style={{ color: 'var(--danger)' }}>{heightErr}</span> : (data.heightCm ? `≈ ${cmToFtIn(data.heightCm)}` : undefined)}>
           Height
         </Label>
-        <NumberInput value={data.heightCm} onValue={(v) => onChange({ heightCm: v })} suffix="cm" placeholder="e.g. 175" />
+        <RangePicker
+          value={data.heightCm}
+          onValue={(heightCm) => onChange({ heightCm })}
+          min={120}
+          max={230}
+          suggestedValue={175}
+          suffix="cm"
+          label="Height"
+        />
       </div>
     </div>
   );

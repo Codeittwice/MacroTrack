@@ -36,6 +36,8 @@ On 2026-09-25 this project was built with JDK 21, Android SDK Platform 35, Build
 | `npm run android:apk` | Builds `android/app/build/outputs/apk/debug/app-debug.apk`; drag it onto the emulator window or sideload it to a phone |
 | `npm run android:open` | Opens the project in Android Studio (logcat, profiler) |
 
+The required height and current-weight onboarding fields also have touch-native minus/plus controls and sliders. They provide a reliable fallback when an AVD does not render its software keyboard.
+
 ### Debugging
 Open `chrome://inspect/#devices` in Chrome on the PC. The app's WebView appears there, and **inspect** gives
 full DevTools: console, network and Application → IndexedDB, where the `macrotrack` database lives.

@@ -1,4 +1,4 @@
-import { Label, NumberInput } from '@/components/ui';
+import { Label, NumberInput, RangePicker } from '@/components/ui';
 import { Info } from 'lucide-react';
 import type { WizardData } from '../wizardState';
 import { bodyFatErrorMsg, weightErrorMsg } from '../validation';
@@ -15,7 +15,16 @@ export default function CurrentWeight({ data, onChange }: { data: WizardData; on
 
       <div>
         <Label hint={weightErr ? <span style={{ color: 'var(--danger)' }}>{weightErr}</span> : undefined}>Weight</Label>
-        <NumberInput value={data.weightKg} onValue={(v) => onChange({ weightKg: v })} suffix="kg" placeholder="e.g. 80" />
+        <RangePicker
+          value={data.weightKg}
+          onValue={(weightKg) => onChange({ weightKg })}
+          min={30}
+          max={300}
+          step={0.5}
+          suggestedValue={75}
+          suffix="kg"
+          label="Weight"
+        />
       </div>
 
       <div>

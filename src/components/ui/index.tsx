@@ -3,7 +3,7 @@
  * their own file under components/ui and re-export here via the integrator.
  */
 import clsx from 'clsx';
-import { X } from 'lucide-react';
+import { Minus, Plus, X } from 'lucide-react';
 import { useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
 
 export { clsx as cx };
@@ -80,6 +80,64 @@ export function NumberInput({
         {...rest}
       />
       {suffix && <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted">{suffix}</span>}
+    </div>
+  );
+}
+
+/** Touch-first numeric control for flows where a device keyboard is unavailable. */
+export function RangePicker({
+  value, onValue, min, max, step = 1, suggestedValue, suffix, label,
+}: {
+  value: number | undefined;
+  onValue: (value: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+  suggestedValue: number;
+  suffix: string;
+  label: string;
+}) {
+  const current = value ?? suggestedValue;
+  const decimals = Math.max(0, String(step).split('.')[1]?.length ?? 0);
+  const format = (number: number) => number.toFixed(decimals);
+  const update = (number: number) => onValue(Number(Math.min(max, Math.max(min, number)).toFixed(decimals)));
+
+  return (
+    <div className="rounded-xl border border-border bg-surface-2 px-3 py-2">
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          aria-label={`Decrease ${label}`}
+          onClick={() => update(current - step)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:border-muted hover:text-text"
+        >
+          <Minus size={18} />
+        </button>
+        <output aria-live="polite" className="min-w-0 flex-1 text-center text-lg font-semibold">
+          {format(current)} {suffix}
+        </output>
+        <button
+          type="button"
+          aria-label={`Increase ${label}`}
+          onClick={() => update(current + step)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:border-muted hover:text-text"
+        >
+          <Plus size={18} />
+        </button>
+      </div>
+      <input
+        type="range"
+        aria-label={label}
+        min={min}
+        max={max}
+        step={step}
+        value={current}
+        onPointerDown={() => {
+          if (value === undefined) onValue(current);
+        }}
+        onChange={(event) => update(Number(event.target.value))}
+        className="mt-2 h-2 w-full cursor-pointer accent-primary"
+      />
     </div>
   );
 }

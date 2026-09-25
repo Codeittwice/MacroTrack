@@ -17,6 +17,7 @@ Committed milestones:
 - Wave 4 is complete: coach, progress, water, measurements, photos, backup/restore, and reminders are in `ad80961` (pushed to `origin/feature/app-build`).
 - AI evaluation and provider-key security audit: `08a7b44`.
 - Desktop/Pixel 7 onboarding, logging, dashboard, and backup/restore smoke coverage: `2953bc4` (with intermediate QA and nutrition-audit checkpoints also pushed).
+- The Android onboarding has touch-native height and current-weight pickers, so emulator testing does not depend on an AVD software keyboard. The accompanying picker regression test is part of the next checkpoint.
 
 The Wave 2 and current Wave 3 work is checkpointed through `358ebf7`. Preserve subsequent working-tree changes; do not reset, checkout, or discard them.
 
@@ -77,6 +78,7 @@ Pixel_7_API_35 (Google APIs x86_64)                                            #
 android/gradlew.bat installDebug                                                # APK built successfully
 adb install -r app-debug.apk                                                     # installed successfully
 nl.macrotrack.app/.MainActivity                                                  # launched and foregrounded
+RangePicker component test                                                       # passed
 ```
 
 Use JDK 21 for this Gradle 8.11 project. Android Studio 2026 bundles Java 25, which fails with `Unsupported class file major version 69`.
