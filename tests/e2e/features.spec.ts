@@ -20,8 +20,8 @@ async function seed(page: Page, days = 42) {
       checkInWeekday: new Date().getDay(), onboardedAt: Date.now() - days * 86_400_000,
     });
     const { tdee, targets } = targetsFromProfile(profile, 72, 34);
-    const weights = [];
-    const logs = [];
+    const weights: unknown[] = [];
+    const logs: unknown[] = [];
     for (let i = 0; i <= days; i++) {
       const date = addDays(start, i);
       weights.push(newRecord({ date, kg: Math.round((72 - 0.05 * i + (i % 3 === 0 ? 0.3 : -0.2)) * 10) / 10, time: Date.now() }));

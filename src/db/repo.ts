@@ -14,6 +14,10 @@ export const DEFAULT_SETTINGS: Settings = {
   waterGoalMl: 2500,
   waterReminderEnabled: false,
   waterReminderTime: '20:00',
+  weighInReminderEnabled: false,
+  weighInReminderTime: '07:30',
+  logReminderEnabled: false,
+  logReminderTime: '21:00',
   syncEnabled: false,
   updatedAt: 0,
 };

@@ -94,6 +94,12 @@ export interface Settings {
   waterReminderEnabled: boolean;
   /** Local clock time in HH:MM format. */
   waterReminderTime: string;
+  /** Daily weigh-in notification (Android app). */
+  weighInReminderEnabled: boolean;
+  weighInReminderTime: string;
+  /** Evening food-logging notification (Android app). */
+  logReminderEnabled: boolean;
+  logReminderTime: string;
   syncEnabled: boolean;
   updatedAt: number;
 }

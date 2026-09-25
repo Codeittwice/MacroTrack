@@ -65,7 +65,8 @@ export function ProfileSection({ profile }: { profile: Profile }) {
 
   const age = draft.birthDate ? ageOn(draft.birthDate) : undefined;
   const weightForRate = draft.startWeightKg ?? profile.startWeightKg;
-  const kgPerWeek = draft.rateMagnitude !== undefined ? (draft.rateMagnitude / 100) * weightForRate : undefined;
+  // Signed by goal: a 0.5% rate while losing is -0.34 kg/wk, not +0.34.
+  const kgPerWeek = draft.rateMagnitude !== undefined && draft.goal ? (signedRate(draft.goal, draft.rateMagnitude) / 100) * weightForRate : undefined;
 
   function validate(): string | null {
     if (draft.heightCm === undefined || !validateHeightCm(draft.heightCm)) return 'Height must be between 120 and 230 cm.';

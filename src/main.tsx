@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './app/routes';
 import { ThemeSync } from './app/ThemeSync';
+import { ReminderSync } from './app/ReminderSync';
 import './styles/index.css';
 import { registerSW } from 'virtual:pwa-register';
 
@@ -18,6 +19,7 @@ if (isNativeShell) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeSync />
+    <ReminderSync />
     <RouterProvider router={router} />
   </StrictMode>,
 );
