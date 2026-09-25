@@ -24,3 +24,15 @@ describe('backup', () => {
     expect(() => parseBackup(JSON.stringify({ version: 2, tables: {} }))).toThrow('MacroTrack');
   });
 });
+
+describe('backup row validation', () => {
+  it('rejects files whose rows would break the app', async () => {
+    const good = await createBackup();
+    const bad = { ...good, tables: { ...good.tables, logEntries: [{ id: 'x', date: '2026-09-24', meal: 0, nutrients: { kcal: 'lots' } }] } };
+    expect(() => parseBackup(JSON.stringify(bad))).toThrow('MacroTrack');
+    const noId = { ...good, tables: { ...good.tables, weights: [{ date: '2026-09-24', kg: 80 }] } };
+    expect(() => parseBackup(JSON.stringify(noId))).toThrow('MacroTrack');
+    const ok = { ...good, tables: { ...good.tables, weights: [{ id: 'w', date: '2026-09-24', kg: 80, updatedAt: 1 }] } };
+    expect(parseBackup(JSON.stringify(ok)).tables.weights).toHaveLength(1);
+  });
+});

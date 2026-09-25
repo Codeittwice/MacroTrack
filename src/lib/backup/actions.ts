@@ -12,10 +12,31 @@ export interface BackupFile {
   tables: Record<TableName, unknown[]>;
 }
 
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+const finite = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
+const isDate = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+/** Per-table row checks: enough to keep a corrupted or hand-edited file from breaking the app. */
+const ROW_OK: Partial<Record<TableName, (r: Record<string, unknown>) => boolean>> = {
+  weights: (r) => isDate(r.date) && finite(r.kg),
+  logEntries: (r) => isDate(r.date) && finite(r.meal) && isObj(r.nutrients) && finite((r.nutrients as Record<string, unknown>).kcal),
+  targets: (r) => isDate(r.effectiveFrom) && isObj(r.base) && finite((r.base as Record<string, unknown>).kcal),
+  water: (r) => isDate(r.date) && finite(r.ml),
+  measurements: (r) => isDate(r.date) && isObj(r.values),
+  checkins: (r) => isDate(r.date),
+  notes: (r) => isDate(r.date),
+};
+
 function isBackup(value: unknown): value is BackupFile {
-  if (!value || typeof value !== 'object') return false;
+  if (!isObj(value)) return false;
   const candidate = value as Partial<BackupFile>;
-  return candidate.version === BACKUP_VERSION && !!candidate.tables && typeof candidate.tables === 'object' && TABLES.every((table) => Array.isArray(candidate.tables?.[table]));
+  if (candidate.version !== BACKUP_VERSION || !isObj(candidate.tables)) return false;
+  return TABLES.every((table) => {
+    const rows = candidate.tables?.[table];
+    if (!Array.isArray(rows)) return false;
+    const check = ROW_OK[table];
+    return rows.every((row) => isObj(row) && typeof row.id === 'string' && (!check || check(row)));
+  });
 }
 
 /** Export all JSON-safe local tracker data. API keys and photo blobs stay on the device. */
