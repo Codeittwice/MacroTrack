@@ -10,7 +10,7 @@ Use the emulator for anything native: the camera, barcode scanning, notification
 ## Level 2 — Android emulator (real Android WebView)
 
 ### One-time setup
-1. Install **Android Studio** (https://developer.android.com/studio). The installer includes a JDK.
+1. Install **Android Studio** (https://developer.android.com/studio) and **JDK 21**. This project uses Gradle 8.11, which cannot run on Android Studio 2026's bundled Java 25 runtime.
 2. In Android Studio's SDK Manager, install:
    - Android SDK Platform 35
    - Android SDK Build-Tools
@@ -21,8 +21,12 @@ Use the emulator for anything native: the camera, barcode scanning, notification
 5. Set these environment variables, then restart the terminal:
    - `ANDROID_HOME = %LOCALAPPDATA%\Android\Sdk`
    - add `%ANDROID_HOME%\platform-tools` and `%ANDROID_HOME%\emulator` to `PATH`
-   - `JAVA_HOME = C:\Program Files\Android\Android Studio\jbr`
+   - `JAVA_HOME` to the JDK 21 home, for example `C:\Program Files\Microsoft\jdk-21.0.12.101-hotspot`
 6. Check the setup with `npx cap doctor`.
+
+### Verified local baseline
+
+On 2026-09-25 this project was built with JDK 21, Android SDK Platform 35, Build-Tools 34/35, and a Google APIs x86_64 API 35 `Pixel_7_API_35` AVD. The resulting debug APK installed and launched successfully as `nl.macrotrack.app`.
 
 ### Daily use
 | Command | What it does |

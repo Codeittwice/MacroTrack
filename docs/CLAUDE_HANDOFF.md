@@ -69,6 +69,18 @@ npm run eval:ai # passed; grounded MAPE improves calories 28.1% -> 4.7%, protein
 npm run e2e     # passed; 4 desktop Chromium/Pixel 7 onboarding, logging, dashboard, and backup flows
 ```
 
+Native Android validation completed on 2026-09-25:
+
+```text
+JDK 21 + Android SDK Platform 35/Build-Tools 34/35 + Emulator/Platform-Tools  # installed
+Pixel_7_API_35 (Google APIs x86_64)                                            # created and booted
+android/gradlew.bat installDebug                                                # APK built successfully
+adb install -r app-debug.apk                                                     # installed successfully
+nl.macrotrack.app/.MainActivity                                                  # launched and foregrounded
+```
+
+Use JDK 21 for this Gradle 8.11 project. Android Studio 2026 bundles Java 25, which fails with `Unsupported class file major version 69`.
+
 Manual mobile smoke check at `http://127.0.0.1:5173`:
 
 - Completed onboarding with a temporary non-personal development profile.
@@ -88,8 +100,7 @@ The existing NEVO fetch-failure test emits an expected `network down` diagnostic
 3. Manually test the complete recipe and saved-meal save, edit, re-log, and delete flow in a browser, then add Playwright coverage for it.
 4. Validate the barcode camera flow on a physical Android device or browser with a real camera. Confirm permission denial, cancellation, success, and the offline cached-product path.
 5. Validate one request per configured provider with a user-owned test key before calling the AI work complete.
-6. Configure Java/Android SDK and an emulator to run `npm run android:apk` and install the result. The current host has no `JAVA_HOME` or `java` command available, although `npm run cap:sync` passes.
-7. Add a native scheduled-notification adapter during Wave 5 if closed-app water notifications are required; the current Wave 4 reminder is deliberately an in-app dashboard prompt.
+6. Add a native scheduled-notification adapter during Wave 5 if closed-app water notifications are required; the current Wave 4 reminder is deliberately an in-app dashboard prompt.
 
 ## Intentional Deferrals
 
@@ -97,7 +108,7 @@ The existing NEVO fetch-failure test emits an expected `network down` diagnostic
 - Open Food Facts search, barcode lookup, and camera scanning UI are implemented. Hardware permission, cancellation, and real-product checks still need a physical-device validation.
 - Recipe and Saved Meal creation, editing, deletion, and re-logging are implemented.
 - Photo estimation is not yet implemented. The offline fixture evaluation and client-side security audit are complete; provider transports still require user-owned-key validation.
-- Capacitor/Tauri packaging and sync remain later waves. Wave 4 coach, progress statistics, extras, backup/import, and the in-app water reminder are implemented.
+- Capacitor Android packaging, emulator setup, APK installation, and launch are now verified. Tauri packaging remains later-wave work. Wave 4 coach, progress statistics, extras, backup/import, and the in-app water reminder are implemented.
 - Nutrition audit regressions cover sign convention, sparse-data shrinkage, smoothing, and isolated weight-typo handling.
 
 ## Suggested Message To Claude
