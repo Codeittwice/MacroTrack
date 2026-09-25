@@ -6,6 +6,7 @@ import { StatTiles } from './StatTiles';
 import { TodayMeals } from './TodayMeals';
 import { WeightCard } from './WeightCard';
 import { WaterReminderBanner } from './WaterReminderBanner';
+import { DailyPrompts } from './DailyPrompts';
 import { formattedToday, greeting } from './format';
 import { mealForTime } from './mealForTime';
 import { useDashboardData } from './useDashboardData';
@@ -51,11 +52,10 @@ export default function DashboardPage() {
         <h1 className="mb-3 text-2xl font-semibold">{formattedToday(now)}</h1>
       </div>
 
-      <div className="lg:col-span-2">
+      {/* empty:hidden: banners render nothing when not due, and an empty grid cell would leave a gap */}
+      <div className="flex flex-col gap-3 empty:hidden lg:col-span-2">
         <CheckInBanner visible={showCheckIn} />
-      </div>
-
-      <div className="lg:col-span-2">
+        <DailyPrompts settings={settings} weighedToday={!!data.weights?.some((w) => w.date === data.today)} loggedToday={(data.dayEntries?.length ?? 0) > 0} />
         <WaterReminderBanner settings={settings} />
       </div>
 
