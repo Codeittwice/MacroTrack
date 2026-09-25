@@ -100,6 +100,9 @@ export interface Settings {
   /** Evening food-logging notification (Android app). */
   logReminderEnabled: boolean;
   logReminderTime: string;
+  /** Notification on the profile's weekly check-in day. */
+  checkInReminderEnabled: boolean;
+  checkInReminderTime: string;
   syncEnabled: boolean;
   updatedAt: number;
 }

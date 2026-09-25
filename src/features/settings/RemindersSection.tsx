@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Input } from '@/components/ui';
-import { useSettings } from '@/app/hooks';
+import { useProfile, useSettings } from '@/app/hooks';
 import { updateSettings } from '@/db/repo';
 import type { Settings } from '@/db/types';
 import { isNativeApp } from '@/lib/native/platform';
@@ -12,17 +12,19 @@ type Pair = { enabled: keyof Settings; time: keyof Settings; title: string; hint
 const REMINDERS: Pair[] = [
   { enabled: 'weighInReminderEnabled', time: 'weighInReminderTime', title: 'Weigh-in reminder', hint: 'Daily nudge to weigh in, ideally after waking up.', timeLabel: 'Remind me at' },
   { enabled: 'logReminderEnabled', time: 'logReminderTime', title: 'Food log reminder', hint: 'Evening nudge to finish today’s food log.', timeLabel: 'Remind me at' },
+  { enabled: 'checkInReminderEnabled', time: 'checkInReminderTime', title: 'Check-in reminder', hint: 'On your weekly check-in day, to review your trend and targets.', timeLabel: 'Remind me at' },
   { enabled: 'waterReminderEnabled', time: 'waterReminderTime', title: 'Water reminder', hint: 'Prompt when today is below your water goal.', timeLabel: 'Remind me after' },
 ];
 
 export function RemindersSection() {
   const settings = useSettings();
+  const checkInWeekday = useProfile()?.checkInWeekday;
   const [denied, setDenied] = useState(false);
   const native = isNativeApp();
 
   const update = async (patch: Partial<Settings>) => {
     await updateSettings(patch);
-    if (native) setDenied(!(await syncNativeReminders({ ...settings, ...patch })));
+    if (native) setDenied(!(await syncNativeReminders({ ...settings, ...patch }, checkInWeekday)));
   };
 
   return (
