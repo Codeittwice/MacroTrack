@@ -17,11 +17,15 @@
     "android:emu": "npm run cap:sync && npx cap run android",
     "android:live": "npx cap run android -l --external",
     "android:apk": "npm run cap:sync && cd android && gradlew.bat assembleDebug",
-    "android:open": "npx cap open android"
+    "android:open": "npx cap open android",
+    "tauri": "tauri",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.0",
     "@capacitor/core": "^7.4.0",
+    "@tauri-apps/api": "^2.11.1",
     "@zxing/browser": "^0.2.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -40,6 +44,7 @@
     "@capacitor/cli": "^7.4.0",
     "@playwright/test": "^1.53.0",
     "@tailwindcss/vite": "^4.1.8",
+    "@tauri-apps/cli": "^2.11.5",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^22.15.0",
     "@types/react": "^19.1.0",

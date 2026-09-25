@@ -17,7 +17,8 @@ Committed milestones:
 - Wave 4 is complete: coach, progress, water, measurements, photos, backup/restore, and reminders are in `ad80961` (pushed to `origin/feature/app-build`).
 - AI evaluation and provider-key security audit: `08a7b44`.
 - Desktop/Pixel 7 onboarding, logging, dashboard, and backup/restore smoke coverage: `2953bc4` (with intermediate QA and nutrition-audit checkpoints also pushed).
-- The Android onboarding has touch-native height and current-weight pickers, so emulator testing does not depend on an AVD software keyboard. The accompanying picker regression test is part of the next checkpoint.
+- Wave 5 Android touch-native onboarding measurement pickers: `c5019ba` (pushed to `origin/feature/app-build`).
+- Wave 5 Windows Tauri host and NSIS packaging are complete in the current checkout. The remaining native acceptance check is to launch the built desktop app and confirm IndexedDB persists after a restart.
 
 The Wave 2 and current Wave 3 work is checkpointed through `358ebf7`. Preserve subsequent working-tree changes; do not reset, checkout, or discard them.
 
@@ -55,6 +56,7 @@ The Wave 2 and current Wave 3 work is checkpointed through `358ebf7`. Preserve s
 - Playwright now covers the primary first-run path in both desktop Chromium and Pixel 7 emulation: complete onboarding, open Food Log, quick-log a meal, confirm its Food Log total, and confirm that Dashboard receives the same total. It also downloads a real backup, adds water, restores through the two-tap UI confirmation, and verifies that the later water entry is removed. Onboarding activity, goal, and diet choices are semantic buttons with pressed state rather than clickable cards.
 - The nutrition audit now has a direct shrinkage regression: at the 10-day evidence threshold the expenditure estimate is pulled toward its prior, and at 15 days it moves predictably closer to the same raw signal.
 - Trend weight now excludes only implausible isolated daily averages from the computed trend. It does not delete raw history, leaves normal water-weight noise alone, and retains sustained changes that have neighbouring support.
+- `src-tauri/` adds the Windows Tauri 2 host. It uses the existing Vite production build, has a restricted application CSP for the current food and AI hosts, applies MacroTrack branding, and produces an NSIS installer. `package.json` exposes `npm run desktop:dev` and `npm run desktop:build`; `docs/WINDOWS_TESTING.md` records local use and the generated installer path.
 
 The data APIs used by the UI already exist in `src/lib/log/actions.ts`, `src/lib/foods/foods.ts`, and `src/lib/food-sources/search.ts`. Keep these as the write/search ownership points rather than duplicating IndexedDB work in feature components.
 
@@ -68,6 +70,8 @@ npm test       # passed; 33 files, 268 tests
 npm run cap:sync # passed; production PWA copied into Capacitor Android project
 npm run eval:ai # passed; grounded MAPE improves calories 28.1% -> 4.7%, protein 38.1% -> 5.3%
 npm run e2e     # passed; 4 desktop Chromium/Pixel 7 onboarding, logging, dashboard, and backup flows
+npm run desktop:build # passed; release executable and NSIS installer produced
+npm test         # passed; 34 files, 269 tests
 ```
 
 Native Android validation completed on 2026-09-25:
@@ -110,9 +114,9 @@ The existing NEVO fetch-failure test emits an expected `network down` diagnostic
 - Open Food Facts search, barcode lookup, and camera scanning UI are implemented. Hardware permission, cancellation, and real-product checks still need a physical-device validation.
 - Recipe and Saved Meal creation, editing, deletion, and re-logging are implemented.
 - Photo estimation is not yet implemented. The offline fixture evaluation and client-side security audit are complete; provider transports still require user-owned-key validation.
-- Capacitor Android packaging, emulator setup, APK installation, and launch are now verified. Tauri packaging remains later-wave work. Wave 4 coach, progress statistics, extras, backup/import, and the in-app water reminder are implemented.
+- Capacitor Android packaging, emulator setup, APK installation, and launch are verified. The Tauri Windows executable and NSIS installer build successfully; launch and offline-persistence validation remain before declaring the Wave 5 exit gate complete. Wave 4 coach, progress statistics, extras, backup/import, and the in-app water reminder are implemented.
 - Nutrition audit regressions cover sign convention, sparse-data shrinkage, smoothing, and isolated weight-typo handling.
 
 ## Suggested Message To Claude
 
-> Please continue MacroTrack from the latest pushed checkpoint on `feature/app-build`. Wave 4 is complete: coach approval, progress statistics, water, measurements, local photos, versioned JSON backup/restore, and an in-app water reminder are all implemented. Wave 3 has Open Food Facts Netherlands search/cache, barcode lookup and opt-in camera scanning, recipe/saved-meal workflows, `Describe meal` provider transports with validation, grounding, review-before-logging, a 30-fixture offline evaluation command, and a documented security audit. The desktop and Pixel 7 Playwright onboarding/quick-log smoke test passes. The next meaningful work is Wave 5 packaging after Java/Android SDK and Rust/Tauri tooling are installed. NEVO source data, user-owned provider-key testing, physical camera validation, and platform tooling remain external prerequisites.
+> Please continue MacroTrack from the latest pushed checkpoint on `feature/app-build`. Wave 4 is complete: coach approval, progress statistics, water, measurements, local photos, versioned JSON backup/restore, and an in-app water reminder are all implemented. Wave 3 has Open Food Facts Netherlands search/cache, barcode lookup and opt-in camera scanning, recipe/saved-meal workflows, `Describe meal` provider transports with validation, grounding, review-before-logging, a 30-fixture offline evaluation command, and a documented security audit. The desktop and Pixel 7 Playwright onboarding/quick-log smoke test passes. Wave 5 Android is verified on a Pixel 7 API 35 emulator; Tauri now produces a Windows executable and NSIS installer. Launch the desktop executable, create a temporary offline record, restart it, and confirm the record persists before declaring Wave 5 done. NEVO source data, user-owned provider-key testing, and physical camera validation remain external prerequisites.
