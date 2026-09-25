@@ -45,7 +45,10 @@ function parseJson(text: string): AiMealEstimate {
 
 async function requireOk(response: Response): Promise<void> {
   if (response.ok) return;
-  if (response.status === 401 || response.status === 403) throw new Error(`The provider rejected this API key (${response.status}). Check it in Settings.`);
+  // Gemini answers an invalid key with 400 "API key not valid" rather than 401.
+  const keyProblem = response.status === 401 || response.status === 403
+    || (response.status === 400 && /api key/i.test(await response.clone().text().catch(() => '')));
+  if (keyProblem) throw new Error(`The provider rejected this API key (${response.status}). Check it in Settings.`);
   if (response.status === 429) throw new Error('The provider is rate limiting or out of credit (429). Try again later or check your plan.');
   throw new Error(`The AI provider could not complete this estimate (${response.status}).`);
 }
