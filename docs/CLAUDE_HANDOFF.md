@@ -37,7 +37,7 @@ Verification at the last commit: `npm run build` ✓, `npm test` 290 ✓, `npm r
 
 ## Known gaps / next steps
 
-1. **NEVO data (user action).** Download the NEVO-online CSV from RIVM (rivm.nl → NEVO; accepting their licence is the user's call), save it to `data/raw/` and run `npm run nevo`. Until then generic foods come from Open Food Facts and AI, and Search is branded-first.
+1. **NEVO: done (2026-09-27).** NEVO-online 2025/9.0 (2328 foods) is bundled in `public/data/nevo.json` with values unchanged and RIVM's required credit. The raw RIVM files live in `data/raw/`, which git ignores. When RIVM publishes a new version, download it, put it in `data/raw/`, run `npx tsx scripts/build-nevo.ts data/raw/<file>.csv` and rebuild. The terms forbid charging users for NEVO data, so ask nevo@rivm.nl before publishing a paid app.
 2. Test each AI provider once with a real user-owned key. There's a button for this in Settings → AI → Test key.
 3. Test barcode scanning with a physical camera (emulator: set the back camera to Webcam0).
 4. Optional: Supabase sync. For now, move data between phone and PC with Backup → Save/share → Restore.
