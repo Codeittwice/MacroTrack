@@ -15,3 +15,4 @@ src-tauri/target
 
 *.tsbuildinfo
 release/
+data/raw/

@@ -74,12 +74,14 @@ const SYNONYM_GROUPS: string[][] = [
   ['brood', 'boterham'],
   ['yoghurt', 'yogurt'],
   ['kwark', 'quark'],
+  ['havermout', 'havervlokken', 'oats', 'oatmeal'],
 ];
 
 /** Canonicalise a single normalised (unstemmed) token/phrase to its group's primary form, if any. */
 function canonicalize(word: string): string {
   for (const group of SYNONYM_GROUPS) {
-    if (group.includes(word)) return group[0];
+    // Callers pass stemmed tokens ("havervlokken" -> "havervlok"), so compare stemmed entries too.
+    if (group.includes(word) || group.some((entry) => !entry.includes(' ') && stemNl(entry) === word)) return group[0];
   }
   return word;
 }
@@ -108,6 +110,17 @@ export function normalizeForIndex(term: string): string | false {
   const first = norm.split(' ')[0];
   if (!first) return false;
   return canonicalize(stemNl(first));
+}
+
+/** Base words of Dutch compounds, so "tarwebrood" is also found as "brood" and "karnemelk" as "melk". */
+const COMPOUND_HEADS = ['brood', 'melk', 'kaas', 'vlees', 'worst', 'saus', 'sap', 'yoghurt', 'rijst', 'olie', 'boter', 'koek', 'taart', 'soep', 'vis', 'salade', 'pasta', 'chocolade', 'kwark', 'ham'];
+
+/** Index-side processTerm: the normal term plus the head of a compound word (queries stay single-term). */
+export function indexTerms(term: string): string | string[] | false {
+  const base = normalizeForIndex(term);
+  if (!base) return false;
+  const head = COMPOUND_HEADS.find((h) => base.length > h.length + 2 && base.endsWith(h));
+  return head ? [base, head] : base;
 }
 
 export interface NormalizedQuery {

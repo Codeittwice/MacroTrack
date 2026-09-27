@@ -36,7 +36,12 @@ function nameTokens(name: string): string[] {
     .map((t) => normalizeForIndex(t) || t);
 }
 
-/** Match tier of an item's name against the normalised query: 3 exact, 2 prefix, 1 otherwise. */
+/**
+ * Match tier of an item's name against the normalised query: 3 exact; 2.5 when every query word
+ * matches and the name's first word is one of them (NEVO puts the base food first: "Melk halfvolle",
+ * "Appel m schil"); 2 when every word matches somewhere; 1 otherwise. Compound words count as a
+ * match on their head ("tarwebrood" matches "brood").
+ */
 function matchTier(item: FoodItem, queryText: string, queryTokens: string[]): number {
   const normName = normalizeText(item.name);
   const nameNoBrand = item.brand ? normName.replace(normalizeText(item.brand), '').trim() : normName;
@@ -45,9 +50,17 @@ function matchTier(item: FoodItem, queryText: string, queryTokens: string[]): nu
   if (queryText && targetName === queryText) return 3;
 
   const tTokens = nameTokens(targetName);
+  // NEVO writes compounds back to front with a hyphen: "Melk karne-" is karnemelk, "Ei kippen-" is kippenei.
+  const words = item.name.split(/\s+/);
+  const heads = words.filter((w, i) => i > 0 && w.endsWith('-')).map((w) => normalizeForIndex(w.slice(0, -1) + words[0].toLowerCase())).filter((t): t is string => !!t);
+  const firstTokens = [tTokens[0], ...heads].filter(Boolean);
+  const allTokens = [...tTokens, ...heads];
+  const hit = (tt: string, qt: string) => tt.startsWith(qt) || (qt.length >= 4 && tt.endsWith(qt));
+  if (queryTokens.length > 0 && queryTokens.every((qt) => allTokens.some((tt) => hit(tt, qt)))) {
+    if (firstTokens.some((ft) => queryTokens.includes(ft))) return 2.75;
+    return firstTokens.some((ft) => queryTokens.some((qt) => hit(ft, qt))) ? 2.5 : 2;
+  }
   if (queryText && targetName.startsWith(queryText)) return 2;
-  if (queryTokens.length > 0 && queryTokens.every((qt) => tTokens.some((tt) => tt.startsWith(qt)))) return 2;
-
   return 1;
 }
 
@@ -77,7 +90,7 @@ export async function searchFoods(query: string, opts: { limit?: number; sources
 
   const { text, brand, tokens } = normalizeQuery(q);
 
-  type Ranked = { item: FoodItem; tier: number; boost: number; brandBump: number; order: number };
+  type Ranked = { item: FoodItem; tier: number; boost: number; brandBump: number; generic: number; words: number; order: number };
   const seen = new Map<string, Ranked>();
 
   settled.forEach((res, srcIdx) => {
@@ -88,7 +101,7 @@ export async function searchFoods(query: string, opts: { limit?: number; sources
       const tier = matchTier(item, text, tokens);
       const boost = sourceBoost(src.id);
       const brandBump = brand && item.brand && normalizeText(item.brand).includes(brand) ? 1 : 0;
-      seen.set(item.id, { item, tier, boost, brandBump, order: idx });
+      seen.set(item.id, { item, tier, boost, brandBump, generic: /(^|\s)gem(\s|$)/i.test(item.name) ? 1 : 0, words: normalizeText(item.name).split(' ').length, order: idx });
     });
   });
 
@@ -96,6 +109,10 @@ export async function searchFoods(query: string, opts: { limit?: number; sources
     if (a.tier !== b.tier) return b.tier - a.tier;
     if (a.boost !== b.boost) return b.boost - a.boost;
     if (a.brandBump !== b.brandBump) return b.brandBump - a.brandBump;
+    // NEVO marks averaged, generic foods with "gem" (gemiddeld): the usual pick when logging.
+    if (a.generic !== b.generic) return b.generic - a.generic;
+    // Among equal matches the plainer food ("Appel m schil gem") beats dishes that contain it.
+    if (a.words !== b.words) return a.words - b.words;
     return a.order - b.order;
   });
 
@@ -137,3 +154,6 @@ export async function getFoodByBarcode(rawBarcode: string): Promise<FoodItem | u
   }
   return undefined;
 }
+
+/** Test hook. */
+export const __matchTierForTest = matchTier;

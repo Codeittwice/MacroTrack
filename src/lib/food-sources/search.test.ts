@@ -159,3 +159,27 @@ describe('recipeToFoodItem / recipesSource', () => {
     expect(results.some((r) => r.id === 'recipe:r2')).toBe(false);
   });
 });
+
+describe('ranking against real NEVO naming', () => {
+  const nevoRow = (code: number, name: string, kcal: number): NevoRow => [code, name, '', '', 'Test', 'g', kcal, 1, 1, 1, null, null, null, null, null];
+  const names = async (q: string) => (await searchFoods(q, { sources: ['nevo'] })).slice(0, 3).map((f) => f.name);
+
+  beforeEach(() => {
+    __setNevoDataForTest([
+      nevoRow(1, 'Appeltjes gedroogd', 292), nevoRow(2, 'Appelcarre', 278), nevoRow(3, 'Appel z schil gem', 55),
+      nevoRow(4, 'Ei kippen- gebakken', 220), nevoRow(5, 'Ei kippen- rauw gem', 132), nevoRow(6, 'Eidooier kippen- gekookt', 361),
+      nevoRow(7, 'Melk karne-', 30), nevoRow(8, 'Pap karnemelkse bloem-', 52),
+      nevoRow(9, 'Tarwebrood volkoren gem v fijn en grof', 235), nevoRow(10, 'Tarwenotenbrood volkoren', 298),
+    ]);
+  });
+
+  it('prefers the plain, averaged NEVO food', async () => {
+    expect((await names('appel'))[0]).toBe('Appel z schil gem');
+    expect((await names('ei'))[0]).toBe('Ei kippen- rauw gem');
+    expect((await names('volkoren brood'))[0]).toBe('Tarwebrood volkoren gem v fijn en grof');
+  });
+
+  it('understands NEVO reversed compounds ("Melk karne-" is karnemelk)', async () => {
+    expect((await names('karnemelk'))[0]).toBe('Melk karne-');
+  });
+});

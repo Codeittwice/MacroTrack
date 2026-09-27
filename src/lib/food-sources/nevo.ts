@@ -1,7 +1,7 @@
 import MiniSearch from 'minisearch';
 import type { FoodItem, FoodSource, Nutrients } from '@/db/types';
 import { round } from '@/lib/utils/nutrients';
-import { normalizeForIndex, normalizeQuery, normalizeText } from './normalize';
+import { normalizeForIndex, normalizeQuery, normalizeText, indexTerms } from './normalize';
 import { runQuery } from './query';
 
 import type { NevoRow, NevoFile } from './nevo-format';
@@ -26,7 +26,8 @@ function buildIndex(docs: NevoDoc[]): MiniSearch<NevoDoc> {
   const mini = new MiniSearch<NevoDoc>({
     fields: ['nameNl', 'nameEn', 'synonyms'],
     storeFields: ['nameNl', 'nameEn', 'synonyms'],
-    processTerm: normalizeForIndex,
+    processTerm: indexTerms,
+    searchOptions: { processTerm: normalizeForIndex },
   });
   if (docs.length) mini.addAll(docs);
   return mini;
@@ -36,7 +37,7 @@ function applyData(data: NevoFile) {
   rows = data.rows;
   byCode = new Map(rows.map((r) => [r[0], r]));
   header = data.header;
-  const docs: NevoDoc[] = rows.map((r) => ({ id: r[0], nameNl: r[1], nameEn: r[2] ?? '', synonyms: r[3] ?? '' }));
+  const docs: NevoDoc[] = rows.map((r) => ({ id: r[0], nameNl: r[1], nameEn: r[2] ?? '', synonyms: [r[3] ?? '', ...reversedCompounds(r[1])].join(' ').trim() }));
   index = buildIndex(docs);
 }
 
@@ -154,4 +155,10 @@ export const nevoSource: FoodSource = {
  */
 export function nevoCredit(version = header?.version && header.version !== 'none' ? header.version : '2025/9.0'): string {
   return `Gebaseerd op gegevens van NEVO-online versie ${version}, RIVM, Bilthoven en andere gegevens`;
+}
+
+/** NEVO writes compounds back to front: "Melk karne-" -> "karnemelk", "Ei kippen-" -> "kippenei". */
+export function reversedCompounds(name: string): string[] {
+  const words = name.split(/\s+/);
+  return words.slice(1).filter((w) => w.length > 2 && w.endsWith('-')).map((w) => (w.slice(0, -1) + words[0]).toLowerCase());
 }
