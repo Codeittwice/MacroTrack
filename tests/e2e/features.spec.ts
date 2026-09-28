@@ -131,3 +131,30 @@ test('imports weight and calorie history from another app', async ({ page }) => 
   await page.goto('/log/2026-01-05');
   await expect(page.getByText('MacroFactor · daily total')).toBeVisible();
 });
+
+test('estimates body fat with a tape measure and tracks body composition', async ({ page }) => {
+  await seed(page, 10); // female, 168 cm
+  await page.goto('/settings');
+  await page.getByRole('button', { name: "Don't know it? Estimate it" }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByLabel('Neck circumference').fill('33');
+  await sheet.getByLabel('Waist circumference').fill('72');
+  await sheet.getByLabel('Hip circumference').fill('96');
+  await expect(sheet.getByRole('status')).toContainText('%');
+  await sheet.getByRole('button', { name: 'Use this value' }).click();
+  await expect(page.getByLabel('Body fat percentage')).not.toHaveValue('');
+
+  await page.goto('/extras/measurements');
+  await page.getByRole('button', { name: /Log/ }).first().click();
+  const m = page.getByRole('dialog');
+  await m.getByLabel('neck measurement').fill('33');
+  await m.getByLabel('waist measurement').fill('74');
+  await m.getByLabel('hips measurement').fill('97');
+  await expect(m.getByText(/body fat/).first()).toBeVisible();
+  await m.getByRole('button', { name: 'Save as my body fat' }).click();
+  await m.getByRole('button', { name: 'Save measurements' }).click();
+
+  await page.goto('/progress');
+  await expect(page.getByText('Body composition')).toBeVisible();
+  await expect(page.getByText('Lean mass')).toBeVisible();
+});

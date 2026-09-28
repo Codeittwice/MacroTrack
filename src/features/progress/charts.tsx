@@ -63,3 +63,23 @@ export function MeasurementChart({ data, keys, height = 200 }: { data: Record<st
     </ResponsiveContainer>
   );
 }
+
+export interface BodyCompPoint { date: DateKey; bodyFat: number; lean: number; fat: number }
+
+/** Body fat % (right axis) with lean and fat mass (left axis) over time. */
+export function BodyCompChart({ data, unit, height = 220 }: { data: BodyCompPoint[]; unit: 'kg' | 'lb'; height?: number }) {
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <LineChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: -12 }}>
+        <CartesianGrid stroke="var(--border)" vertical={false} />
+        <XAxis dataKey="date" tickFormatter={shortDate} minTickGap={24} {...axis} />
+        <YAxis yAxisId="mass" domain={['auto', 'auto']} width={48} {...axis} />
+        <YAxis yAxisId="pct" orientation="right" domain={['auto', 'auto']} width={36} tickFormatter={(v: number) => `${Math.round(v)}%`} {...axis} />
+        <Tooltip {...tooltipStyle} formatter={(v: number, name: string) => (name === 'bodyFat' ? [`${v.toFixed(1)} %`, 'Body fat'] : [`${v.toFixed(1)} ${unit}`, name === 'lean' ? 'Lean mass' : 'Fat mass'])} />
+        <Line yAxisId="mass" dataKey="lean" stroke="var(--protein)" strokeWidth={2} dot={{ r: 2 }} isAnimationActive={false} />
+        <Line yAxisId="mass" dataKey="fat" stroke="var(--fat)" strokeWidth={2} dot={{ r: 2 }} isAnimationActive={false} />
+        <Line yAxisId="pct" dataKey="bodyFat" stroke="var(--kcal)" strokeWidth={2.5} strokeDasharray="4 3" dot={{ r: 2 }} isAnimationActive={false} />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}

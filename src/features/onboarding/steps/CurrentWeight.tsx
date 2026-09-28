@@ -1,3 +1,4 @@
+import { BodyFatEstimateLink } from '@/components/BodyFatEstimator';
 import { Label, NumberInput, RangePicker } from '@/components/ui';
 import { Info } from 'lucide-react';
 import type { WizardData } from '../wizardState';
@@ -29,7 +30,8 @@ export default function CurrentWeight({ data, onChange }: { data: WizardData; on
 
       <div>
         <Label hint={bfErr ? <span style={{ color: 'var(--danger)' }}>{bfErr}</span> : 'optional'}>Body fat %</Label>
-        <NumberInput value={data.bodyFatPct} onValue={(v) => onChange({ bodyFatPct: v })} suffix="%" placeholder="e.g. 20" />
+        <NumberInput aria-label="Body fat percentage" value={data.bodyFatPct} onValue={(v) => onChange({ bodyFatPct: v })} suffix="%" placeholder="e.g. 20" />
+        <BodyFatEstimateLink sex={data.sex} heightCm={data.heightCm} onUse={(pct) => onChange({ bodyFatPct: pct })} />
       </div>
 
       <div className="flex gap-2 rounded-xl bg-surface-2 p-3 text-sm text-muted">

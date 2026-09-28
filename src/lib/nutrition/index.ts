@@ -11,3 +11,4 @@ export { trendWeight, weeklyRate, dailyAverages, excludeWeightOutliers, interpol
 export { estimateExpenditure, expenditureSeries } from './expenditure';
 export { projectGoalDate } from './projection';
 export { proposeCheckIn, type ProposeCheckInArgs, type ProposeCheckInResult } from './checkin';
+export { navyBodyFat, rfmBodyFat, BODY_TYPE_GUIDE, bodyFatCategory, leanAndFatMass, type BodyTypeBand, type NavyInput } from './bodyfat';

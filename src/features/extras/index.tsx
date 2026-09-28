@@ -1,3 +1,6 @@
+import { useProfile } from '@/app/hooks';
+import { db } from '@/db/schema';
+import { bodyFatCategory, navyBodyFat } from '@/lib/nutrition';
 import { ImportHistoryCard } from './ImportHistoryCard';
 import { isNativeApp } from '@/lib/native/platform';
 import { saveTextFile } from '@/lib/native/saveFile';
@@ -37,7 +40,7 @@ function MeasurementSheet({ entry, open, onClose }: { entry?: Measurement; open:
   const [saving, setSaving] = useState(false);
   useEffect(() => { if (open) { setDate(entry?.date ?? today()); setValues(entry?.values ?? {}); } }, [entry, open]);
   const valid = Object.values(values).some((value) => value !== undefined && value > 0);
-  return <Sheet open={open} onClose={onClose} title={entry ? 'Edit measurements' : 'Log measurements'}><div className="flex flex-col gap-4"><div><Label>Date</Label><Input type="date" value={date} max={today()} onChange={(event) => setDate(event.target.value)} /></div>{MEASUREMENT_FIELDS.map((field) => <div key={field}><Label>{field[0].toUpperCase() + field.slice(1)}</Label><NumberInput aria-label={`${field} measurement`} value={values[field]} onValue={(value) => setValues((current) => ({ ...current, [field]: value }))} suffix="cm" /></div>)}<Button variant="primary" size="lg" disabled={!valid || saving} onClick={async () => { setSaving(true); try { await saveMeasurement(date, Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as Record<string, number>); onClose(); } finally { setSaving(false); } }}>Save measurements</Button></div></Sheet>;
+  return <Sheet open={open} onClose={onClose} title={entry ? 'Edit measurements' : 'Log measurements'}><div className="flex flex-col gap-4"><div><Label>Date</Label><Input type="date" value={date} max={today()} onChange={(event) => setDate(event.target.value)} /></div>{MEASUREMENT_FIELDS.map((field) => <div key={field}><Label>{field[0].toUpperCase() + field.slice(1)}</Label><NumberInput aria-label={`${field} measurement`} value={values[field]} onValue={(value) => setValues((current) => ({ ...current, [field]: value }))} suffix="cm" /></div>)}<MeasurementBodyFat values={values} /><Button variant="primary" size="lg" disabled={!valid || saving} onClick={async () => { setSaving(true); try { await saveMeasurement(date, Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as Record<string, number>); onClose(); } finally { setSaving(false); } }}>Save measurements</Button></div></Sheet>;
 }
 
 function MeasurementsPage() {
@@ -46,7 +49,7 @@ function MeasurementsPage() {
   const [editing, setEditing] = useState<Measurement>();
   if (measurements === undefined) return <div className="py-10 text-center text-sm text-muted">Loading measurements...</div>;
   const openNew = () => { setEditing(undefined); setOpen(true); };
-  return <div className="mx-auto flex max-w-lg flex-col gap-4"><PageHeader title="Body measurements" right={<Button variant="primary" size="sm" onClick={openNew}><Plus size={16} /> Log</Button>} />{measurements.length === 0 ? <EmptyState icon={<Ruler size={32} />} title="No measurements yet" body="Track your waist, chest, and hips alongside your weight." action={<Button variant="primary" onClick={openNew}><Plus size={18} /> Log measurements</Button>} /> : <div className="flex flex-col gap-2">{measurements.map((entry) => <Card key={entry.id} className="flex items-center gap-3"><button type="button" className="min-w-0 flex-1 text-left" onClick={() => { setEditing(entry); setOpen(true); }}><div className="font-medium">{entry.date}</div><div className="text-sm text-muted">{Object.entries(entry.values).map(([name, value]) => `${name} ${value} cm`).join(', ')}</div></button><button type="button" aria-label={`Delete measurements from ${entry.date}`} onClick={() => void deleteMeasurement(entry.id)} className="rounded-lg p-2 text-muted hover:bg-surface-2"><Trash2 size={16} /></button></Card>)}</div>}<MeasurementSheet entry={editing} open={open} onClose={() => setOpen(false)} /></div>;
+  return <div className="mx-auto flex max-w-lg flex-col gap-4"><PageHeader title="Body measurements" right={<Button variant="primary" size="sm" onClick={openNew}><Plus size={16} /> Log</Button>} />{measurements.length === 0 ? <EmptyState icon={<Ruler size={32} />} title="No measurements yet" body="Track your waist, chest, and hips alongside your weight." action={<Button variant="primary" onClick={openNew}><Plus size={18} /> Log measurements</Button>} /> : <div className="flex flex-col gap-2">{measurements.map((entry) => <Card key={entry.id} className="flex items-center gap-3"><button type="button" className="min-w-0 flex-1 text-left" onClick={() => { setEditing(entry); setOpen(true); }}><div className="font-medium">{entry.date}</div><div className="text-sm text-muted">{Object.entries(entry.values).map(([name, value]) => `${name} ${value} cm`).join(', ')}<EntryBodyFat values={entry.values} /></div></button><button type="button" aria-label={`Delete measurements from ${entry.date}`} onClick={() => void deleteMeasurement(entry.id)} className="rounded-lg p-2 text-muted hover:bg-surface-2"><Trash2 size={16} /></button></Card>)}</div>}<MeasurementSheet entry={editing} open={open} onClose={() => setOpen(false)} /></div>;
 }
 
 function PhotoPreview({ photo }: { photo: ProgressPhoto }) {
@@ -86,4 +89,33 @@ export default function ExtrasPage() {
   if (section === 'backup') return <BackupPage />;
   const title = section === 'measurements' ? 'Body measurements' : section === 'photos' ? 'Progress photos' : section === 'backup' ? 'Export and backup' : 'Extras';
   return <div className="mx-auto max-w-lg"><PageHeader title={title} right={section ? <Button variant="ghost" size="sm" onClick={() => navigate('/more')}>Back</Button> : undefined} /><EmptyState title="Coming in this Wave" body="This workflow is next in the Wave 4 build." /></div>;
+}
+
+/** Navy estimate from a measurement set, using the profile's sex and height. */
+function useNavyEstimate(values: Record<string, number | undefined>): number | null {
+  const profile = useProfile();
+  if (!profile) return null;
+  return navyBodyFat({ sex: profile.sex, heightCm: profile.heightCm, neckCm: values.neck, waistCm: values.waist, hipCm: values.hips });
+}
+
+function EntryBodyFat({ values }: { values: Record<string, number> }) {
+  const pct = useNavyEstimate(values);
+  return pct === null ? null : <span> · ≈ {pct.toFixed(1)}% body fat</span>;
+}
+
+function MeasurementBodyFat({ values }: { values: Record<string, number | undefined> }) {
+  const profile = useProfile();
+  const pct = useNavyEstimate(values);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => setSaved(false), [pct]);
+  if (!profile) return null;
+  if (pct === null) {
+    return <p className="text-xs text-muted">Add neck and waist{profile.sex === 'female' ? ' and hips' : ''} to estimate your body fat (US Navy method).</p>;
+  }
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-2 p-3" role="status">
+      <div><div className="font-semibold">≈ {pct.toFixed(1)}% body fat</div><div className="text-xs text-muted">{bodyFatCategory(profile.sex, pct)} · US Navy method, ±3–4 %</div></div>
+      <Button size="sm" disabled={saved} onClick={async () => { await db.profile.update(profile.id, { bodyFatPct: Math.round(pct * 10) / 10, updatedAt: Date.now() }); setSaved(true); }}>{saved ? 'Saved' : 'Save as my body fat'}</Button>
+    </div>
+  );
 }

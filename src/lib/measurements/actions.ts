@@ -3,7 +3,7 @@ import { db } from '@/db/schema';
 import { alive, newRecord, softDelete } from '@/db/repo';
 import type { DateKey, Measurement } from '@/db/types';
 
-export const MEASUREMENT_FIELDS = ['waist', 'chest', 'hips'] as const;
+export const MEASUREMENT_FIELDS = ['neck', 'waist', 'chest', 'hips'] as const;
 export type MeasurementField = typeof MEASUREMENT_FIELDS[number];
 
 function cleanValues(values: Record<string, number>): Record<string, number> {

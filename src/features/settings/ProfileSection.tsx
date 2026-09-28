@@ -1,3 +1,4 @@
+import { BodyFatEstimateLink } from '@/components/BodyFatEstimator';
 import { useEffect, useState } from 'react';
 import { Button, Input, Label, NumberInput, Segmented } from '@/components/ui';
 import { Section } from './Section';
@@ -151,7 +152,8 @@ export function ProfileSection({ profile }: { profile: Profile }) {
           </div>
           <div>
             <Label hint="optional">Body fat</Label>
-            <NumberInput value={draft.bodyFatPct} onValue={(v) => set('bodyFatPct', v)} suffix="%" />
+            <NumberInput aria-label="Body fat percentage" value={draft.bodyFatPct} onValue={(v) => set('bodyFatPct', v)} suffix="%" />
+            <BodyFatEstimateLink sex={draft.sex} heightCm={draft.heightCm} onUse={(pct) => set('bodyFatPct', pct)} />
           </div>
         </div>
 

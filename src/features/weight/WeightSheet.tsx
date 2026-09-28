@@ -1,9 +1,11 @@
+import { BodyFatEstimateLink } from '@/components/BodyFatEstimator';
 import { useState } from 'react';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { Button, Input, Label, NumberInput, Sheet } from '@/components/ui';
 import type { DateKey } from '@/db/types';
 import { today } from '@/lib/utils/date';
 import { deleteWeight, fromDisplay, logWeight, toDisplay, updateWeight } from '@/lib/weight/actions';
+import { useProfile } from '@/app/hooks';
 
 export interface WeightSheetEntry {
   id: string;
@@ -43,6 +45,7 @@ export function WeightSheet({
     const kg = entry?.kg ?? lastWeightKg;
     return kg !== undefined ? round1(toDisplay(kg, unit)) : undefined;
   });
+  const profile = useProfile();
   const [bodyFat, setBodyFat] = useState<number | undefined>(entry?.bodyFatPct);
   const [note, setNote] = useState(entry?.note ?? '');
   const [saving, setSaving] = useState(false);
@@ -121,6 +124,7 @@ export function WeightSheet({
         <div>
           <Label hint="Optional">Body fat</Label>
           <NumberInput aria-label="Body fat" value={bodyFat} onValue={setBodyFat} suffix="%" />
+          <BodyFatEstimateLink sex={profile?.sex} heightCm={profile?.heightCm} onUse={setBodyFat} />
           {!bodyFatValid && <div className="mt-1 text-xs" style={{ color: 'var(--danger)' }}>Must be between 0 and 75%</div>}
         </div>
 

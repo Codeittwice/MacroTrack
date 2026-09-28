@@ -8,11 +8,11 @@ import { alive } from '@/db/repo';
 import type { DateKey, Nutrients } from '@/db/types';
 import { getDailyIntake } from '@/lib/log/queries';
 import { averageIntake, adherence, currentExpenditure } from '@/lib/stats';
-import { expenditureSeries, projectGoalDate, targetsFromProfile } from '@/lib/nutrition';
+import { bodyFatCategory, expenditureSeries, leanAndFatMass, navyBodyFat, projectGoalDate, targetsFromProfile } from '@/lib/nutrition';
 import { summarizeTrend, useWeights } from '@/lib/weight/queries';
 import { addDays, ageOn, fromDateKey, toDateKey, today } from '@/lib/utils/date';
 import { toDisplay } from '@/lib/weight/actions';
-import { EnergyChart, MeasurementChart, NutrientChart } from './charts';
+import { BodyCompChart, EnergyChart, MeasurementChart, NutrientChart, type BodyCompPoint } from './charts';
 
 const RANGES: { value: TrendRange; label: string }[] = [
   { value: '1M', label: '1M' }, { value: '3M', label: '3M' }, { value: '6M', label: '6M' }, { value: '1Y', label: '1Y' }, { value: 'ALL', label: 'All' },
@@ -82,6 +82,25 @@ export default function ProgressPage() {
     const keys = [...new Set(measurements.flatMap((m) => Object.keys(m.values)))];
     return { keys, rows: measurements.map((m) => ({ date: m.date, ...m.values })) };
   }, [measurements]);
+
+  const bodyComp = useMemo((): BodyCompPoint[] => {
+    if (!profile || !weights || !trend || trend.trend.length === 0) return [];
+    const trendByDate = new Map(trend.trend.map((p) => [p.date, p.value]));
+    const lastTrend = trend.trend[trend.trend.length - 1];
+    const trendOn = (d: DateKey) => trendByDate.get(d) ?? (d > lastTrend.date ? lastTrend.value : trend.trend[0].value);
+    const byDate = new Map<DateKey, number>();
+    // Navy estimates from measurements first, then explicit body fat entries override them.
+    for (const m of measurements ?? []) {
+      const pct = navyBodyFat({ sex: profile.sex, heightCm: profile.heightCm, neckCm: m.values.neck, waistCm: m.values.waist, hipCm: m.values.hips });
+      if (pct !== null) byDate.set(m.date, pct);
+    }
+    for (const w of weights) if (w.bodyFatPct !== undefined) byDate.set(w.date, w.bodyFatPct);
+    const keep = inRange(range, date);
+    return [...byDate].filter(([d]) => keep(d)).sort(([a], [b]) => a.localeCompare(b)).map(([d, pct]) => {
+      const { leanKg, fatKg } = leanAndFatMass(trendOn(d), pct);
+      return { date: d, bodyFat: pct, lean: toDisplay(leanKg, settings.weightUnit), fat: toDisplay(fatKg, settings.weightUnit) };
+    });
+  }, [profile, weights, trend, measurements, range, date, settings.weightUnit]);
 
   if (profile === undefined || weights === undefined || intake === undefined) return <div className="py-10 text-center text-sm text-muted">Loading progress…</div>;
   if (profile === null) return <EmptyState title="Finish onboarding first" body="Progress is built from your weight and food log." />;
@@ -158,6 +177,18 @@ export default function ProgressPage() {
         {nutrientData.length > 0 ? <NutrientChart data={nutrientData} color={nutrientMeta.color} target={nutrientTarget} unit={nutrientMeta.unit} /> : <p className="py-6 text-center text-sm text-muted">No food logged in this range.</p>}
       </Card>
 
+      {bodyComp.length > 0 && (
+        <Card>
+          <div className="mb-3"><div className="font-semibold">Body composition</div><div className="text-sm text-muted">Body fat from your entries and tape measurements, applied to your trend weight</div></div>
+          <div className="mb-3 grid grid-cols-3 gap-4">
+            <Stat label="Body fat" value={`${bodyComp[bodyComp.length - 1].bodyFat.toFixed(1)}%`} sub={bodyFatCategory(profile.sex, bodyComp[bodyComp.length - 1].bodyFat)} />
+            <Stat label="Lean mass" value={`${bodyComp[bodyComp.length - 1].lean.toFixed(1)} ${unit}`} sub={bodyComp.length > 1 ? `${signed(bodyComp[bodyComp.length - 1].lean - bodyComp[0].lean)} ${unit}` : undefined} />
+            <Stat label="Fat mass" value={`${bodyComp[bodyComp.length - 1].fat.toFixed(1)} ${unit}`} sub={bodyComp.length > 1 ? `${signed(bodyComp[bodyComp.length - 1].fat - bodyComp[0].fat)} ${unit}` : undefined} />
+          </div>
+          {bodyComp.length > 1 ? <BodyCompChart data={bodyComp} unit={unit} /> : <p className="text-center text-sm text-muted">Log body fat or tape measurements again to see the trend.</p>}
+        </Card>
+      )}
+
       {measurementData && (
         <Card>
           <div className="mb-3 font-semibold">Body measurements</div>
@@ -174,3 +205,5 @@ export default function ProgressPage() {
     </div>
   );
 }
+
+const signed = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : '±'}${Math.abs(v).toFixed(1)}`;
