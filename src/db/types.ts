@@ -203,3 +203,82 @@ export interface ProgressPhoto extends Syncable {
   blob: Blob;
   pose?: 'front' | 'side' | 'back';
 }
+
+// ---- Training (schema v2) ----
+
+export type Muscle =
+  | 'chest' | 'frontDelts' | 'sideDelts' | 'rearDelts' | 'biceps' | 'triceps' | 'forearms'
+  | 'lats' | 'upperBack' | 'traps' | 'lowerBack' | 'abs' | 'obliques'
+  | 'glutes' | 'quads' | 'hamstrings' | 'adductors' | 'calves';
+
+export type Equipment = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight' | 'kettlebell' | 'band' | 'cardio' | 'other';
+
+export interface ExerciseDef {
+  id: string;
+  name: string;
+  nameNl?: string;
+  equipment: Equipment;
+  primary: Muscle[];
+  secondary: Muscle[];
+  kind: 'strength' | 'bodyweight' | 'cardio';
+  /** metabolic equivalent, used only for an informational burn estimate */
+  met?: number;
+}
+
+/** User-created exercise (built-ins live in code). */
+export type CustomExercise = Syncable & Omit<ExerciseDef, 'id'>;
+
+export interface WorkoutSet {
+  reps?: number;
+  kg?: number;
+  durationSec?: number;
+  rpe?: number;
+  type: 'warmup' | 'working';
+  done: boolean;
+}
+
+export interface WorkoutExercise {
+  exerciseId: string;
+  /** snapshot so renaming an exercise never rewrites history */
+  name: string;
+  sets: WorkoutSet[];
+  note?: string;
+}
+
+export interface Workout extends Syncable {
+  date: DateKey;
+  startedAt: number;
+  finishedAt?: number;
+  name: string;
+  templateId?: string;
+  note?: string;
+  exercises: WorkoutExercise[];
+}
+
+export interface WorkoutTemplate extends Syncable {
+  name: string;
+  exercises: { exerciseId: string; name: string; sets: number; repMin?: number; repMax?: number; restSec?: number }[];
+}
+
+// ---- Supplements (schema v2) ----
+
+export interface Supplement extends Syncable {
+  name: string;
+  dose: number;
+  unit: string;
+  timesPerDay: number;
+  active: boolean;
+  /** HH:MM local; schedules a daily notification in the Android app */
+  reminderTime?: string;
+  /** per dose; when set, taking a dose also adds it to the food log */
+  nutrients?: Nutrients;
+}
+
+export interface SupplementLog extends Syncable {
+  date: DateKey;
+  supplementId: string;
+  /** 0-based dose of the day */
+  doseIndex: number;
+  takenAt: number;
+  logEntryId?: string;
+}

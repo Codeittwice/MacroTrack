@@ -14,6 +14,7 @@ const Onboarding = lazy(() => import('@/features/onboarding'));
 const Coach = lazy(() => import('@/features/coach'));
 const Recipes = lazy(() => import('@/features/recipes'));
 const Extras = lazy(() => import('@/features/extras'));
+const Training = lazy(() => import('@/features/training'));
 
 function OnboardingGate({ children }: { children: ReactNode }) {
   const profile = useProfile();
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
       { path: '/coach', element: page(<Coach />) },
       { path: '/recipes', element: page(<Recipes />) },
       { path: '/extras/*', element: page(<Extras />) },
+      { path: '/training/*', element: page(<Training />) },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

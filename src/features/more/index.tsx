@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
-import { BookOpen, ChevronRight, Droplets, Gauge, Image, Ruler, Save, Settings } from 'lucide-react';
+import { BookOpen, Scale, ChevronRight, Droplets, Gauge, Image, Ruler, Save, Settings } from 'lucide-react';
 import { PageHeader } from '@/components/ui';
 
 const ITEMS = [
+  { to: '/weight', label: 'Weight log', icon: Scale },
   { to: '/coach', label: 'Coach and targets', icon: Gauge },
   { to: '/recipes', label: 'Recipes, meals and my foods', icon: BookOpen },
   { to: '/extras/measurements', label: 'Body measurements', icon: Ruler },

@@ -1,11 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { ChartLine, Ellipsis, House, Scale, UtensilsCrossed } from 'lucide-react';
+import { ChartLine, Dumbbell, Ellipsis, House, UtensilsCrossed } from 'lucide-react';
 import clsx from 'clsx';
 
 const TABS = [
   { to: '/', label: 'Dashboard', icon: House },
   { to: '/log', label: 'Food log', icon: UtensilsCrossed },
-  { to: '/weight', label: 'Weight', icon: Scale },
+  { to: '/training', label: 'Training', icon: Dumbbell },
   { to: '/progress', label: 'Progress', icon: ChartLine },
   { to: '/more', label: 'More', icon: Ellipsis },
 ];

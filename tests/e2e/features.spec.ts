@@ -158,3 +158,31 @@ test('estimates body fat with a tape measure and tracks body composition', async
   await expect(page.getByText('Body composition')).toBeVisible();
   await expect(page.getByText('Lean mass')).toBeVisible();
 });
+
+test('logs a workout, updates the muscle map, and reuses it as a template', async ({ page }) => {
+  await seed(page, 3);
+  await page.goto('/training');
+  await page.getByRole('button', { name: 'Start empty workout' }).click();
+  await page.getByRole('button', { name: 'Add exercise' }).click();
+  const picker = page.getByRole('dialog');
+  await picker.getByLabel('Search exercises').fill('bench press');
+  await picker.getByRole('button', { name: /^Bench press/ }).first().click();
+  for (let i = 1; i <= 3; i++) {
+    await page.getByLabel(`Bench press set ${i} weight`).fill('80');
+    await page.getByLabel(`Bench press set ${i} reps`).fill('8');
+    await page.getByRole('button', { name: `Complete Bench press set ${i}` }).click();
+  }
+  await expect(page.getByRole('timer', { name: 'Rest timer' })).toBeVisible();
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+
+  await expect(page.getByText('1,920 kg').or(page.getByText('1.920 kg'))).toBeVisible();
+  await page.getByLabel('Template name').fill('Push day');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Saved' })).toBeVisible();
+
+  await page.goto('/training');
+  await expect(page.getByRole('button', { name: 'Chest: 3 sets' })).toBeVisible();
+  await page.getByRole('button', { name: 'Start Push day' }).click();
+  await expect(page.getByLabel('Bench press set 3 weight')).toBeVisible();
+  await expect(page.getByText('80 × 8').first()).toBeVisible(); // last time's sets as hints
+});

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Card, EmptyState, PageHeader, ProgressBar, Segmented, Stat } from '@/components/ui';
@@ -129,7 +130,7 @@ export default function ProgressPage() {
       <Segmented options={RANGES} value={range} onChange={setRange} />
 
       <Card>
-        <div className="mb-3"><div className="font-semibold">Weight trend</div><div className="text-sm text-muted">Scale readings and smoothed trend</div></div>
+        <div className="mb-3 flex items-start justify-between gap-3"><div><div className="font-semibold">Weight trend</div><div className="text-sm text-muted">Scale readings and smoothed trend</div></div><Link to="/weight" className="shrink-0 text-sm text-primary hover:underline">Weight log</Link></div>
         <TrendChart weights={weights.map((w) => ({ date: w.date, kg: w.kg }))} trend={trend?.trend ?? []} range={range} unit={unit} goalKg={goalKg} />
       </Card>
 

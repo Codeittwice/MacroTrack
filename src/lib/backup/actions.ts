@@ -3,8 +3,10 @@ import { DEFAULT_SETTINGS } from '@/db/repo';
 import type { Table } from 'dexie';
 
 const BACKUP_VERSION = 1;
-const TABLES = ['profile', 'settings', 'weights', 'measurements', 'foods', 'recipes', 'savedMeals', 'logEntries', 'targets', 'checkins', 'water', 'notes'] as const;
+const TABLES = ['profile', 'settings', 'weights', 'measurements', 'foods', 'recipes', 'savedMeals', 'logEntries', 'targets', 'checkins', 'water', 'notes', 'exercises', 'workouts', 'workoutTemplates', 'supplements', 'supplementLogs'] as const;
 type TableName = typeof TABLES[number];
+/** Added in schema v2; backups made before that simply don't have them. */
+const OPTIONAL_TABLES: readonly TableName[] = ['exercises', 'workouts', 'workoutTemplates', 'supplements', 'supplementLogs'];
 
 export interface BackupFile {
   version: number;
@@ -25,6 +27,11 @@ const ROW_OK: Partial<Record<TableName, (r: Record<string, unknown>) => boolean>
   measurements: (r) => isDate(r.date) && isObj(r.values),
   checkins: (r) => isDate(r.date),
   notes: (r) => isDate(r.date),
+  workouts: (r) => isDate(r.date) && finite(r.startedAt) && Array.isArray(r.exercises),
+  workoutTemplates: (r) => typeof r.name === 'string' && Array.isArray(r.exercises),
+  exercises: (r) => typeof r.name === 'string' && Array.isArray(r.primary),
+  supplements: (r) => typeof r.name === 'string' && finite(r.dose),
+  supplementLogs: (r) => isDate(r.date) && typeof r.supplementId === 'string',
 };
 
 function isBackup(value: unknown): value is BackupFile {
@@ -32,7 +39,7 @@ function isBackup(value: unknown): value is BackupFile {
   const candidate = value as Partial<BackupFile>;
   if (candidate.version !== BACKUP_VERSION || !isObj(candidate.tables)) return false;
   return TABLES.every((table) => {
-    const rows = candidate.tables?.[table];
+    const rows = candidate.tables?.[table] ?? (OPTIONAL_TABLES.includes(table) ? [] : undefined);
     if (!Array.isArray(rows)) return false;
     const check = ROW_OK[table];
     return rows.every((row) => isObj(row) && typeof row.id === 'string' && (!check || check(row)));
@@ -68,7 +75,7 @@ export async function restoreBackup(backup: BackupFile): Promise<void> {
     for (const name of TABLES) {
       const rows = name === 'settings'
         ? backup.tables.settings.map((row) => ({ ...DEFAULT_SETTINGS, ...(row as object), apiKeys: currentSettings?.apiKeys ?? {} }))
-        : backup.tables[name];
+        : backup.tables[name] ?? [];
       if (rows.length) await (db[name] as unknown as { bulkPut(items: unknown[]): Promise<void> }).bulkPut(rows);
     }
   });

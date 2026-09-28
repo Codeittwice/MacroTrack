@@ -36,3 +36,12 @@ describe('backup row validation', () => {
     expect(parseBackup(JSON.stringify(ok)).tables.weights).toHaveLength(1);
   });
 });
+
+describe('backup compatibility', () => {
+  it('restores a backup made before training and supplements existed', async () => {
+    const current = await createBackup();
+    const old = { ...current, tables: { ...current.tables } } as Record<string, unknown> & { tables: Record<string, unknown> };
+    for (const t of ['exercises', 'workouts', 'workoutTemplates', 'supplements', 'supplementLogs']) delete old.tables[t];
+    await expect(restoreBackup(parseBackup(JSON.stringify(old)))).resolves.toBeUndefined();
+  });
+});

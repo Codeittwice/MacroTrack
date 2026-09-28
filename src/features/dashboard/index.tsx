@@ -1,3 +1,4 @@
+import { TrainingTile } from './TrainingTile';
 import { useMemo } from 'react';
 import { CheckInBanner } from './CheckInBanner';
 import { HeroCard } from './HeroCard';
@@ -82,6 +83,7 @@ export default function DashboardPage() {
           weeklyAverage={data.weeklyAverage}
           today={data.today}
         />
+        <TrainingTile today={data.today} />
       </div>
     </div>
   );
