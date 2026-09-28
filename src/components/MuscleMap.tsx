@@ -75,7 +75,7 @@ function Figure({ shapes, label, props }: { shapes: Partial<Record<Muscle, Shape
   return (
     <figure className="flex flex-col items-center gap-1">
       <svg viewBox="0 0 200 420" {...size} role="group" aria-label={`${label} muscles`}>
-        {SILHOUETTE.map((s, i) => <ShapeEl key={i} s={s} fill="var(--surface-2)" stroke="color-mix(in srgb, var(--muted) 45%, transparent)" />)}
+        <g pointerEvents="none">{SILHOUETTE.map((s, i) => <ShapeEl key={i} s={s} fill="var(--surface-2)" stroke="color-mix(in srgb, var(--muted) 45%, transparent)" />)}</g>
         {(Object.entries(shapes) as [Muscle, Shape[]][]).map(([m, list]) => {
           const n = sets[m] ?? 0;
           const interactive = !!onSelect && !compact;
