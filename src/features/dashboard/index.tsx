@@ -1,3 +1,4 @@
+import { SupplementChecklist } from '@/features/supplements/SupplementChecklist';
 import { TrainingTile } from './TrainingTile';
 import { useMemo } from 'react';
 import { CheckInBanner } from './CheckInBanner';
@@ -84,6 +85,7 @@ export default function DashboardPage() {
           today={data.today}
         />
         <TrainingTile today={data.today} />
+        <SupplementChecklist linkToPage />
       </div>
     </div>
   );

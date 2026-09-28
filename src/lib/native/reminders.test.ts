@@ -22,3 +22,13 @@ describe('reminders', () => {
     await expect(syncNativeReminders({ ...DEFAULT_SETTINGS, logReminderEnabled: true })).resolves.toBe(true);
   });
 });
+
+describe('supplement reminders', () => {
+  it('adds one daily reminder per active supplement with a time', () => {
+    const sup = (name: string, reminderTime?: string, active = true) => ({ id: name, updatedAt: 0, name, dose: 5, unit: 'g', timesPerDay: 1, active, reminderTime });
+    const list = remindersFor(DEFAULT_SETTINGS, undefined, [sup('Creatine', '08:00'), sup('Magnesium'), sup('Old', '09:00', false)]);
+    const s = list.filter((r) => r.id >= 200);
+    expect(s).toHaveLength(1);
+    expect(s[0]).toMatchObject({ id: 200, enabled: true, time: '08:00', title: 'Time for your Creatine' });
+  });
+});

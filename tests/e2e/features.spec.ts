@@ -186,3 +186,36 @@ test('logs a workout, updates the muscle map, and reuses it as a template', asyn
   await expect(page.getByLabel('Bench press set 3 weight')).toBeVisible();
   await expect(page.getByText('80 × 8').first()).toBeVisible(); // last time's sets as hints
 });
+
+test('tracks supplements and counts protein powder in the food log', async ({ page }) => {
+  await seed(page, 3);
+  await page.goto('/supplements');
+  await page.getByRole('button', { name: 'Add supplement' }).first().click();
+  let sheet = page.getByRole('dialog');
+  await sheet.getByLabel('Supplement name').fill('Creatine');
+  await sheet.getByLabel('Dose').fill('5');
+  await sheet.getByRole('button', { name: 'Add supplement' }).click();
+  await expect(sheet).toBeHidden();
+
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  sheet = page.getByRole('dialog');
+  await sheet.getByLabel('Supplement name').fill('Whey');
+  await sheet.getByLabel('Dose').fill('30');
+  await sheet.getByLabel('Counts toward my food log').check();
+  await sheet.getByLabel('Calories per dose').fill('120');
+  await sheet.getByLabel('Protein per dose').fill('24');
+  await sheet.getByRole('button', { name: 'Add supplement' }).click();
+  await expect(sheet).toBeHidden();
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Tick Creatine' }).click();
+  await page.getByRole('button', { name: 'Tick Whey' }).click();
+  await expect(page.getByText('2/2 taken')).toBeVisible();
+
+  await page.goto('/log');
+  await expect(page.getByText('Whey (30 g)')).toBeVisible();
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Untick Whey' }).click();
+  await page.goto('/log');
+  await expect(page.getByText('Whey (30 g)')).toBeHidden();
+});

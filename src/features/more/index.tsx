@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { BookOpen, Scale, ChevronRight, Droplets, Gauge, Image, Ruler, Save, Settings } from 'lucide-react';
+import { BookOpen, Pill, Scale, ChevronRight, Droplets, Gauge, Image, Ruler, Save, Settings } from 'lucide-react';
 import { PageHeader } from '@/components/ui';
 
 const ITEMS = [
@@ -8,6 +8,7 @@ const ITEMS = [
   { to: '/recipes', label: 'Recipes, meals and my foods', icon: BookOpen },
   { to: '/extras/measurements', label: 'Body measurements', icon: Ruler },
   { to: '/extras/photos', label: 'Progress photos', icon: Image },
+  { to: '/supplements', label: 'Supplements', icon: Pill },
   { to: '/extras/water', label: 'Water', icon: Droplets },
   { to: '/extras/backup', label: 'Export, import and backup', icon: Save },
   { to: '/settings', label: 'Settings', icon: Settings },
