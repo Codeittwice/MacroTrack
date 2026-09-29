@@ -1,8 +1,8 @@
 # Handoff (Claude ⇄ Codex)
 
-Branch: `feature/app-build` on github.com/Codeittwice/MacroTrack. Read this file, then `git log`, before starting.
+Branch: `main` on github.com/Codeittwice/MacroTrack. Read this file, then `git log`, before starting.
 
-## Status (updated 2026-09-29, Claude)
+## Status (updated 2026-09-29, Codex)
 
 All plan waves are implemented. The app works as a browser PWA, as an Android APK (Capacitor 7) and as a Windows desktop app (Tauri 2).
 
@@ -26,7 +26,7 @@ All plan waves are implemented. The app works as a browser PWA, as an Android AP
 | Android: icons, splash, edge-to-edge insets, dark system bars | done, emulator-verified |
 | Windows: exe + NSIS installer; data survives a restart | done, verified |
 
-Verification at the last commit: `npm run build` ✓, `npm test` 322 ✓, `npm run e2e` 26 ✓ (desktop and Pixel 7), `npm run desktop:build` ✓, Android debug APK installed and exercised on the Pixel 7 API 35 emulator.
+Verification at the last commit: PR #1 and PR #2 merged into `main`; `npm run build` passed; `npm test` passed with 326 tests in 42 files; `npm run e2e -- --workers=1` passed with 28 tests (desktop and Pixel 7) including "logs a past workout, shows it under its day and edits it"; `npx playwright test -g "weekly check-in" --repeat-each 5 --workers=1` passed 10/10 after the e2e save-wait fix. `npm run android:apk` and `npm run desktop:build` passed. `release/MacroTrack-android-debug.apk` was rebuilt from `main` and installed with `adb install -r` on emulator-5554; `release/MacroTrack_0.1.0_x64-setup.exe` was rebuilt from `main` and run over the existing Windows install.
 
 ## Fixes in the 2026-09-25 Claude pass (what the audit of Codex's work found)
 
@@ -78,12 +78,12 @@ Plan:
 6. Verify the Android keyboard fix on a real device, typing in bottom sheets such as Quick add and the workout sets.
 7. "boterham" ranks rolls before sliced bread in NEVO search (minor).
 8. Sports minutes aren't shown on the muscle map; it counts strength hard sets only, by design.
-9. The e2e test "weekly check-in proposes targets…" is flaky on mobile (~1 in 3): it navigates right after "Apply targets" before the save lands. Wait for a visible confirmation before `page.goto`.
+9. The e2e test "weekly check-in proposes targets…" now waits for the "Targets updated for today." status before navigating; the focused repeat passed 10/10 on 2026-09-29. On this Windows machine, Playwright's dev server can saturate or hang during shutdown with high parallelism, so use `--workers=1` for reliable local e2e verification.
 10. Rebuild `release/` (APK and installer) after any change. Cloud sessions can't: the Android SDK and Rust live on the user's PC.
 
 ## Builds
 
-`release/` (gitignored) holds the latest `MacroTrack-android-debug.apk` (sideload) and `MacroTrack_0.1.0_x64-setup.exe` (Windows installer).
+`release/` (gitignored) holds the latest `MacroTrack-android-debug.apk` (rebuilt and installed with `adb install -r` on 2026-09-29) and `MacroTrack_0.1.0_x64-setup.exe` (rebuilt and installed over the existing Windows app on 2026-09-29).
 
 ## How to test
 
