@@ -233,8 +233,7 @@ test('adds workout calories to the day target when the setting is on', async ({ 
   await page.getByRole('button', { name: 'Complete Running set 1' }).click();
   await page.getByRole('button', { name: 'Finish workout' }).click();
   await expect(page.getByText(/All of it is added to today's calorie target/)).toBeVisible();
-  await expect(page.getByText('Active', { exact: true })).toBeVisible();
-  await expect(page.getByText('30 min', { exact: true })).toBeVisible();
+  await expect(page.getByText('Active', { exact: true }).locator('..')).toContainText('30 min');
   await page.goto('/training');
   await expect(page.getByText(/30 min active · ~\d+ kcal/)).toBeVisible();
   await page.goto('/');
