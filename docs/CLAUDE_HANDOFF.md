@@ -19,6 +19,7 @@ All plan waves are implemented. The app works as a browser PWA, as an Android AP
 | Body fat estimator (US Navy tape, waist-only RFM, visual guide) wired to onboarding/profile/weigh-in; neck measurement; Progress body composition (BF %, lean/fat mass) | done (2026-09-28) |
 | Training tab (replaces Weight tab; Weight log under More): ~100 built-in exercises + custom, live workout with rest timer and last-time hints, templates, PRs/e1RM, front/back muscle map of weekly hard sets (10–20 guideline); net burn estimate (MET − 1), cardio logged in minutes; Settings → Exercise calories Off/Half/Full adds it to that day's target as carbs (default Off) | done (2026-09-29) |
 | Sports and activities (30, e.g. volleyball, basketball, korfball, hockey, padel), logged in minutes; sessions show active minutes and ~kcal instead of sets/volume; not counted as hard sets on the muscle map | done (2026-09-29) |
+| Past workouts and editable history (2026-09-29): Training → "Log a past workout" (date, start, duration, optional template) opens the editor; history is grouped per day with a + per day; finished workouts have Edit (name, date, time, duration, exercises, sets). `logPastWorkout`, `updateWorkoutTiming`, `tidyWorkout` in `src/lib/training/actions.ts`. Exercise library grown to 230 (abs/core, smith/machine variants, lunges/squats, Olympic, air bike, ski erg…) | done |
 | Android keyboard: adjustResize + `interactive-widget=resizes-content` + focus scroll-into-view (`src/app/keyboard.ts`); still to verify on a device | done, unverified on device |
 | Voice meal input (Android recogniser / Web Speech / Gemini-OpenAI transcription), Bulgarian→English translation, Open Food Facts region NL/BG/both (`src/lib/native/speech.ts`, `src/lib/ai/translate.ts`, Settings > Food search / AI > Voice language) | done; mic permission and listening verified on the emulator; real speech still to test on a phone |
 | Supplements: daily checklist (dashboard + page), adherence/streak, Android reminders (ids 200+), protein powder etc. add food-log entries | done (2026-09-28) |
@@ -77,7 +78,8 @@ Plan:
 6. Verify the Android keyboard fix on a real device, typing in bottom sheets such as Quick add and the workout sets.
 7. "boterham" ranks rolls before sliced bread in NEVO search (minor).
 8. Sports minutes aren't shown on the muscle map; it counts strength hard sets only, by design.
-9. Rebuild `release/` (APK and installer) after any change. Cloud sessions can't: the Android SDK and Rust live on the user's PC.
+9. The e2e test "weekly check-in proposes targets…" is flaky on mobile (~1 in 3): it navigates right after "Apply targets" before the save lands. Wait for a visible confirmation before `page.goto`.
+10. Rebuild `release/` (APK and installer) after any change. Cloud sessions can't: the Android SDK and Rust live on the user's PC.
 
 ## Builds
 

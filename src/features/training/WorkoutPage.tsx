@@ -1,28 +1,33 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowDown, ArrowUp, Check, Copy, Flame, Plus, Save, Timer, Trash2, Trophy, X } from 'lucide-react';
-import { Button, Card, Input, NumberInput, PageHeader, cx } from '@/components/ui';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowDown, ArrowUp, Check, Copy, Flame, Pencil, Plus, Save, Timer, Trash2, Trophy, X } from 'lucide-react';
+import { Button, Card, Input, Label, NumberInput, PageHeader, cx } from '@/components/ui';
 import { MuscleMap } from '@/components/MuscleMap';
 import type { Muscle, Workout } from '@/db/types';
 import { useTrend } from '@/lib/weight/queries';
 import { useSettings } from '@/app/hooks';
 import {
-  addExercise, addSet, deleteWorkout, finishWorkout, moveExercise, removeExercise, removeSet, repeatWorkout, saveTemplate,
-  updateSet, updateWorkoutMeta, useExerciseLookup, useWorkout, useWorkouts,
+  addExercise, addSet, deleteWorkout, finishWorkout, moveExercise, removeExercise, removeSet, repeatWorkout, saveTemplate, tidyWorkout,
+  timeOf, updateSet, updateWorkoutMeta, updateWorkoutTiming, useExerciseLookup, useWorkout, useWorkouts,
 } from '@/lib/training/actions';
 import { estimatedBurnKcal, newRecordsIn, previousSets } from '@/lib/training/strength';
 import { activeMinutes, hardSetCount, setsByMuscle, volumeLoad } from '@/lib/training/volume';
 import { ExercisePicker } from './ExercisePicker';
 import { fmtClock, fmtDate, fmtDuration, fmtKg } from './format';
+import { today } from '@/lib/utils/date';
 
 const REST_OPTIONS = [60, 90, 120, 180];
 
 export function WorkoutPage() {
   const { id } = useParams();
+  const [params, setParams] = useSearchParams();
   const workout = useWorkout(id);
   if (workout === undefined) return <div className="py-10 text-center text-sm text-muted">Loading workout…</div>;
   if (workout === null || workout.deletedAt) return <div className="py-10 text-center text-sm text-muted">This workout no longer exists.</div>;
-  return workout.finishedAt ? <WorkoutSummary workout={workout} /> : <ActiveWorkout workout={workout} />;
+  if (!workout.finishedAt) return <ActiveWorkout workout={workout} />;
+  const editing = params.get('edit') === '1';
+  const setEditing = (on: boolean) => setParams(on ? { edit: '1' } : {}, { replace: true });
+  return editing ? <EditWorkout workout={workout} onDone={() => setEditing(false)} /> : <WorkoutSummary workout={workout} onEdit={() => setEditing(true)} />;
 }
 
 function ActiveWorkout({ workout }: { workout: Workout }) {
@@ -57,54 +62,9 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
         right={<span className="flex items-center gap-1 text-sm text-muted"><Timer size={16} /> {fmtClock((now - workout.startedAt) / 1000)}</span>}
       />
 
-      {workout.exercises.map((ex, exIndex) => {
-        const prev = history ? previousSets(history, ex.exerciseId, workout.startedAt) : undefined;
-        const isCardio = lookup(ex.exerciseId)?.kind === 'cardio';
-        return (
-          <Card key={`${ex.exerciseId}-${exIndex}`}>
-            <div className="mb-2 flex items-center gap-1">
-              <div className="min-w-0 flex-1 font-semibold">{ex.name}</div>
-              <IconBtn label={`Move ${ex.name} up`} onClick={() => void moveExercise(workout.id, exIndex, -1)}><ArrowUp size={16} /></IconBtn>
-              <IconBtn label={`Move ${ex.name} down`} onClick={() => void moveExercise(workout.id, exIndex, 1)}><ArrowDown size={16} /></IconBtn>
-              <IconBtn label={`Remove ${ex.name}`} onClick={() => void removeExercise(workout.id, exIndex)}><Trash2 size={16} /></IconBtn>
-            </div>
-            <div className="grid grid-cols-[2.2rem_1fr_1fr_1fr_2.5rem_1.8rem] items-center gap-2 text-xs text-muted">
-              <span>Set</span><span>Last time</span>{isCardio ? <span className="col-span-2">Duration</span> : <><span>kg</span><span>Reps</span></>}<span className="text-center">Done</span><span />
-            </div>
-            {ex.sets.map((s, si) => {
-              const hint = prev?.[si];
-              const label = `${ex.name} set ${si + 1}`;
-              return (
-                <div key={si} className={cx('mt-1.5 grid grid-cols-[2.2rem_1fr_1fr_1fr_2.5rem_1.8rem] items-center gap-2 rounded-lg', s.done && 'bg-surface-2')}>
-                  <button type="button" aria-label={`${label}: ${s.type === 'warmup' ? 'warm-up, tap for working set' : 'working set, tap for warm-up'}`} onClick={() => void updateSet(workout.id, exIndex, si, { type: s.type === 'warmup' ? 'working' : 'warmup' })} className={cx('h-9 rounded-lg text-sm font-medium', s.type === 'warmup' ? 'text-warning' : 'text-text')}>
-                    {s.type === 'warmup' ? 'W' : si + 1 - ex.sets.slice(0, si).filter((x) => x.type === 'warmup').length}
-                  </button>
-                  <span className="truncate text-xs text-muted">{hint ? (isCardio ? `${Math.round((hint.durationSec ?? 0) / 60)} min` : `${hint.kg ?? 0} × ${hint.reps ?? 0}`) : '—'}</span>
-                  {isCardio ? (
-                    <NumberInput aria-label={`${label} minutes`} value={s.durationSec === undefined ? undefined : Math.round(s.durationSec / 60)} onValue={(min) => void updateSet(workout.id, exIndex, si, { durationSec: min === undefined ? undefined : Math.round(min * 60) })} placeholder={hint?.durationSec ? String(Math.round(hint.durationSec / 60)) : 'min'} suffix="min" className="col-span-2 [&_input]:h-9 [&_input]:px-2" />
-                  ) : (
-                    <>
-                      <NumberInput aria-label={`${label} weight`} value={s.kg} onValue={(kg) => void updateSet(workout.id, exIndex, si, { kg })} placeholder={hint?.kg !== undefined ? String(hint.kg) : 'kg'} className="[&_input]:h-9 [&_input]:px-2" />
-                      <NumberInput aria-label={`${label} reps`} value={s.reps} onValue={(reps) => void updateSet(workout.id, exIndex, si, { reps: reps === undefined ? undefined : Math.round(reps) })} placeholder={hint?.reps !== undefined ? String(hint.reps) : 'reps'} className="[&_input]:h-9 [&_input]:px-2" />
-                    </>
-                  )}
-                  <button
-                    type="button"
-                    aria-label={`${s.done ? 'Undo' : 'Complete'} ${label}`}
-                    aria-pressed={s.done}
-                    onClick={() => void completeSet(exIndex, si, !s.done)}
-                    className={cx('mx-auto flex h-9 w-9 items-center justify-center rounded-lg border', s.done ? 'border-primary bg-primary text-on-primary' : 'border-border')}
-                  >
-                    <Check size={18} />
-                  </button>
-                  <IconBtn label={`Delete ${label}`} onClick={() => void removeSet(workout.id, exIndex, si)}><X size={14} /></IconBtn>
-                </div>
-              );
-            })}
-            <Button size="sm" variant="ghost" className="mt-2" onClick={() => void addSet(workout.id, exIndex)}><Plus size={16} /> Add set</Button>
-          </Card>
-        );
-      })}
+      {workout.exercises.map((ex, exIndex) => (
+        <ExerciseCard key={`${ex.exerciseId}-${exIndex}`} workout={workout} exIndex={exIndex} history={history} live onComplete={completeSet} />
+      ))}
 
       <Button size="lg" onClick={() => setPicker(true)}><Plus size={18} /> Add exercise</Button>
 
@@ -134,7 +94,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
   );
 }
 
-function WorkoutSummary({ workout }: { workout: Workout }) {
+function WorkoutSummary({ workout, onEdit }: { workout: Workout; onEdit: () => void }) {
   const nav = useNavigate();
   const settings = useSettings();
   const history = useWorkouts();
@@ -148,7 +108,8 @@ function WorkoutSummary({ workout }: { workout: Workout }) {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
-      <PageHeader title={workout.name} right={<span className="text-sm text-muted">{fmtDate(workout.date)}</span>} />
+      <PageHeader title={workout.name} right={<Button size="sm" onClick={onEdit}><Pencil size={14} /> Edit</Button>} />
+      <div className="-mt-3 text-sm text-muted">{fmtDate(workout.date)} · {timeOf(workout.startedAt)}</div>
       <div className="grid grid-cols-3 gap-3">
         <Card><div className="text-xs text-muted">Duration</div><div className="text-lg font-semibold">{fmtDuration(workout.finishedAt! - workout.startedAt)}</div></Card>
         {hardSetCount(workout) > 0 ? (
@@ -181,7 +142,7 @@ function WorkoutSummary({ workout }: { workout: Workout }) {
         {workout.exercises.map((ex) => (
           <div key={ex.exerciseId} className="border-b border-border py-2 last:border-0">
             <button type="button" className="font-medium hover:underline" onClick={() => nav(`/training/exercise/${ex.exerciseId}`)}>{ex.name}</button>
-            <div className="text-sm text-muted">{ex.sets.map((s) => (s.durationSec ? `${Math.round(s.durationSec / 60)} min` : `${s.type === 'warmup' ? 'W ' : ''}${s.kg ?? 0} × ${s.reps ?? 0}`)).join(' · ')}</div>
+            <div className="text-sm text-muted">{ex.sets.map((s) => (s.durationSec ? `${Math.round(s.durationSec / 60)} min` : `${s.type === 'warmup' ? 'W ' : ''}${s.kg ? `${s.kg} × ${s.reps ?? 0}` : `${s.reps ?? 0} reps`}`)).join(' · ')}</div>
           </div>
         ))}
       </Card>
@@ -207,6 +168,100 @@ function WorkoutSummary({ workout }: { workout: Workout }) {
         <Button variant="danger" onClick={async () => { if (confirm('Delete this workout?')) { await deleteWorkout(workout.id); nav('/training'); } }}><Trash2 size={16} /> Delete</Button>
       </div>
       <Button variant="ghost" onClick={() => nav('/training')}>Back to training</Button>
+    </div>
+  );
+}
+
+/** One exercise with its sets. Live mode has a Done column; edit mode (finished workouts) treats every filled set as done. */
+function ExerciseCard({ workout, exIndex, history, live, onComplete }: {
+  workout: Workout; exIndex: number; history: Workout[] | undefined; live?: boolean;
+  onComplete?: (ex: number, set: number, done: boolean) => void;
+}) {
+  const lookup = useExerciseLookup();
+  const ex = workout.exercises[exIndex];
+  const prev = history ? previousSets(history, ex.exerciseId, workout.startedAt) : undefined;
+  const isCardio = lookup(ex.exerciseId)?.kind === 'cardio';
+  const cols = live ? 'grid-cols-[2.2rem_1fr_1fr_1fr_2.5rem_1.8rem]' : 'grid-cols-[2.2rem_1fr_1fr_1fr_1.8rem]';
+  return (
+    <Card>
+      <div className="mb-2 flex items-center gap-1">
+        <div className="min-w-0 flex-1 font-semibold">{ex.name}</div>
+        <IconBtn label={`Move ${ex.name} up`} onClick={() => void moveExercise(workout.id, exIndex, -1)}><ArrowUp size={16} /></IconBtn>
+        <IconBtn label={`Move ${ex.name} down`} onClick={() => void moveExercise(workout.id, exIndex, 1)}><ArrowDown size={16} /></IconBtn>
+        <IconBtn label={`Remove ${ex.name}`} onClick={() => void removeExercise(workout.id, exIndex)}><Trash2 size={16} /></IconBtn>
+      </div>
+      <div className={cx('grid items-center gap-2 text-xs text-muted', cols)}>
+        <span>Set</span><span>Last time</span>{isCardio ? <span className="col-span-2">Duration</span> : <><span>kg</span><span>Reps</span></>}{live && <span className="text-center">Done</span>}<span />
+      </div>
+      {ex.sets.map((s, si) => {
+        const hint = prev?.[si];
+        const label = `${ex.name} set ${si + 1}`;
+        return (
+          <div key={si} className={cx('mt-1.5 grid items-center gap-2 rounded-lg', cols, live && s.done && 'bg-surface-2')}>
+            <button type="button" aria-label={`${label}: ${s.type === 'warmup' ? 'warm-up, tap for working set' : 'working set, tap for warm-up'}`} onClick={() => void updateSet(workout.id, exIndex, si, { type: s.type === 'warmup' ? 'working' : 'warmup' })} className={cx('h-9 rounded-lg text-sm font-medium', s.type === 'warmup' ? 'text-warning' : 'text-text')}>
+              {s.type === 'warmup' ? 'W' : si + 1 - ex.sets.slice(0, si).filter((x) => x.type === 'warmup').length}
+            </button>
+            <span className="truncate text-xs text-muted">{hint ? (isCardio ? `${Math.round((hint.durationSec ?? 0) / 60)} min` : `${hint.kg ?? 0} × ${hint.reps ?? 0}`) : '—'}</span>
+            {isCardio ? (
+              <NumberInput aria-label={`${label} minutes`} value={s.durationSec === undefined ? undefined : Math.round(s.durationSec / 60)} onValue={(min) => void updateSet(workout.id, exIndex, si, { durationSec: min === undefined ? undefined : Math.round(min * 60) })} placeholder={hint?.durationSec ? String(Math.round(hint.durationSec / 60)) : 'min'} suffix="min" className="col-span-2 [&_input]:h-9 [&_input]:px-2" />
+            ) : (
+              <>
+                <NumberInput aria-label={`${label} weight`} value={s.kg} onValue={(kg) => void updateSet(workout.id, exIndex, si, { kg })} placeholder={hint?.kg !== undefined ? String(hint.kg) : 'kg'} className="[&_input]:h-9 [&_input]:px-2" />
+                <NumberInput aria-label={`${label} reps`} value={s.reps} onValue={(reps) => void updateSet(workout.id, exIndex, si, { reps: reps === undefined ? undefined : Math.round(reps) })} placeholder={hint?.reps !== undefined ? String(hint.reps) : 'reps'} className="[&_input]:h-9 [&_input]:px-2" />
+              </>
+            )}
+            {live && (
+              <button
+                type="button"
+                aria-label={`${s.done ? 'Undo' : 'Complete'} ${label}`}
+                aria-pressed={s.done}
+                onClick={() => onComplete?.(exIndex, si, !s.done)}
+                className={cx('mx-auto flex h-9 w-9 items-center justify-center rounded-lg border', s.done ? 'border-primary bg-primary text-on-primary' : 'border-border')}
+              >
+                <Check size={18} />
+              </button>
+            )}
+            <IconBtn label={`Delete ${label}`} onClick={() => void removeSet(workout.id, exIndex, si)}><X size={14} /></IconBtn>
+          </div>
+        );
+      })}
+      <Button size="sm" variant="ghost" className="mt-2" onClick={() => void addSet(workout.id, exIndex)}><Plus size={16} /> Add set</Button>
+    </Card>
+  );
+}
+
+/** Editor for a finished or past workout: day, time, duration, exercises and sets. */
+function EditWorkout({ workout, onDone }: { workout: Workout; onDone: () => void }) {
+  const nav = useNavigate();
+  const history = useWorkouts();
+  const [picker, setPicker] = useState(false);
+  const durationMin = Math.round(((workout.finishedAt ?? workout.startedAt) - workout.startedAt) / 60_000);
+  // Leaving the editor any way (back button, tab bar) still drops blank sets.
+  useEffect(() => () => { void tidyWorkout(workout.id).catch(() => undefined); }, [workout.id]);
+
+  return (
+    <div className="mx-auto flex max-w-2xl flex-col gap-4 pb-24">
+      <PageHeader title="Edit workout" />
+      <Card className="flex flex-col gap-3">
+        <div><Label>Name</Label><Input aria-label="Workout name" value={workout.name} onChange={(e) => void updateWorkoutMeta(workout.id, { name: e.target.value })} /></div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="col-span-2 sm:col-span-1"><Label>Date</Label><Input type="date" aria-label="Workout date" value={workout.date} max={today()} onChange={(e) => e.target.value && void updateWorkoutTiming(workout.id, { date: e.target.value })} /></div>
+          <div><Label>Start</Label><Input type="time" aria-label="Start time" value={timeOf(workout.startedAt)} onChange={(e) => e.target.value && void updateWorkoutTiming(workout.id, { time: e.target.value })} /></div>
+          <div><Label>Duration</Label><NumberInput aria-label="Duration in minutes" value={durationMin} onValue={(min) => min && void updateWorkoutTiming(workout.id, { durationMin: min })} suffix="min" /></div>
+        </div>
+      </Card>
+
+      {workout.exercises.map((ex, exIndex) => (
+        <ExerciseCard key={`${ex.exerciseId}-${exIndex}`} workout={workout} exIndex={exIndex} history={history} />
+      ))}
+      {workout.exercises.length === 0 && <p className="text-center text-sm text-muted">Add the exercises you did, with their sets.</p>}
+
+      <Button size="lg" onClick={() => setPicker(true)}><Plus size={18} /> Add exercise</Button>
+      <div className="grid grid-cols-2 gap-3">
+        <Button variant="danger" onClick={async () => { if (confirm('Delete this workout?')) { await deleteWorkout(workout.id); nav('/training'); } }}><Trash2 size={16} /> Delete</Button>
+        <Button variant="primary" onClick={async () => { await tidyWorkout(workout.id); onDone(); }}><Check size={18} /> Save</Button>
+      </div>
+      <ExercisePicker open={picker} onClose={() => setPicker(false)} onPick={(def) => { void addExercise(workout.id, def, def.kind === 'cardio' ? 1 : 3); setPicker(false); }} />
     </div>
   );
 }

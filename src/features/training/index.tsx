@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link, Route, Routes, useNavigate } from 'react-router-dom';
-import { ChevronRight, Dumbbell, Play, Plus, Trash2, Trophy } from 'lucide-react';
+import { CalendarPlus, ChevronRight, Dumbbell, Play, Plus, Trash2, Trophy } from 'lucide-react';
 import { Button, Card, EmptyState, PageHeader, Sheet } from '@/components/ui';
 import { MuscleMap, fmtSets } from '@/components/MuscleMap';
-import type { Muscle } from '@/db/types';
+import type { Muscle, Workout } from '@/db/types';
 import { deleteTemplate, startWorkout, useActiveWorkout, useExerciseLookup, useTemplates, useWorkouts } from '@/lib/training/actions';
 import { MUSCLE_LABEL } from '@/lib/training/exercises';
 import { sessionSummary, weeklySetsByMuscle, WEEKLY_SET_TARGET } from '@/lib/training/volume';
@@ -13,6 +13,7 @@ import { estimatedBurnKcal, newRecordsIn } from '@/lib/training/strength';
 import { WorkoutPage } from './WorkoutPage';
 import { ExerciseDetail } from './ExerciseDetail';
 import { fmtDate, fmtDuration } from './format';
+import { PastWorkoutSheet } from './PastWorkoutSheet';
 
 export default function TrainingRoutes() {
   return (
@@ -33,6 +34,8 @@ function TrainingHome() {
   const bodyKg = useTrend()?.latestTrendKg ?? 0;
   const summaryFor = (w: import('@/db/types').Workout) => sessionSummary(w, lookup, bodyKg ? estimatedBurnKcal(w, bodyKg, lookup) : undefined);
   const [muscle, setMuscle] = useState<Muscle>();
+  const [pastFor, setPastFor] = useState<string | null>(null);
+  const [days, setDays] = useState(14);
   const finished = useMemo(() => (workouts ?? []).filter((w) => w.finishedAt), [workouts]);
   const weekly = useMemo(() => weeklySetsByMuscle(finished, today(), lookup), [finished, lookup]);
   const weeklySets = useMemo(() => Object.fromEntries(Object.entries(weekly).map(([m, v]) => [m, v?.sets ?? 0])) as Partial<Record<Muscle, number>>, [weekly]);
@@ -59,6 +62,7 @@ function TrainingHome() {
       ) : (
         <Button variant="primary" size="lg" onClick={() => void begin()}><Plus size={18} /> Start workout or activity</Button>
       )}
+      <Button onClick={() => setPastFor('')}><CalendarPlus size={18} /> Log a past workout</Button>
 
       <Card>
         <div className="mb-2 flex items-baseline justify-between"><div className="font-semibold">Muscles trained</div><div className="text-xs text-muted">hard sets, last 7 days</div></div>
@@ -83,19 +87,9 @@ function TrainingHome() {
       <Card>
         <div className="mb-2 font-semibold">History</div>
         {finished.length === 0 ? (
-          <EmptyState icon={<Dumbbell size={32} />} title="Log your first workout" body="Start a workout, add exercises and tick off your sets. Your muscle map fills in as you train." />
+          <EmptyState icon={<Dumbbell size={32} />} title="Log your first workout" body="Start a workout, or log one you already did. Your muscle map fills in as you train." />
         ) : (
-          <div className="divide-y divide-border">
-            {finished.slice(0, 30).map((w) => (
-              <Link key={w.id} to={`/training/workout/${w.id}`} className="flex items-center gap-3 py-2.5 hover:bg-surface-2">
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium">{w.name}</div>
-                  <div className="text-sm text-muted">{fmtDate(w.date)} · {fmtDuration(w.finishedAt! - w.startedAt)}{summaryFor(w) ? ` · ${summaryFor(w)}` : ''}</div>
-                </div>
-                <ChevronRight size={18} className="text-muted" />
-              </Link>
-            ))}
-          </div>
+          <HistoryByDay workouts={finished} days={days} summaryFor={summaryFor} onAdd={(date) => setPastFor(date)} onMore={() => setDays((d) => d + 30)} />
         )}
       </Card>
 
@@ -118,6 +112,45 @@ function TrainingHome() {
         </div>
       </Sheet>
       <RecentPRs workouts={finished} />
+      <PastWorkoutSheet open={pastFor !== null} date={pastFor || undefined} onClose={() => setPastFor(null)} />
+    </div>
+  );
+}
+
+/**
+ * Finished workouts grouped per day, newest first. Covers the last `days` days that had training;
+ * each day can take another (past) workout and every workout opens to view or edit.
+ */
+function HistoryByDay({ workouts, days, summaryFor, onAdd, onMore }: {
+  workouts: Workout[]; days: number; summaryFor: (w: Workout) => string; onAdd: (date: string) => void; onMore: () => void;
+}) {
+  const groups = useMemo(() => {
+    const byDate = new Map<string, Workout[]>();
+    for (const w of workouts) byDate.set(w.date, [...(byDate.get(w.date) ?? []), w]);
+    return [...byDate.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([date, ws]) => ({ date, ws: ws.sort((a, b) => a.startedAt - b.startedAt) }));
+  }, [workouts]);
+  const shown = groups.slice(0, days);
+  const label = (d: string) => (d === today() ? 'Today' : d === addDays(today(), -1) ? 'Yesterday' : fmtDate(d));
+  return (
+    <div className="flex flex-col gap-3">
+      {shown.map(({ date, ws }) => (
+        <section key={date} aria-label={`Workouts on ${label(date)}`}>
+          <div className="flex items-center justify-between border-b border-border pb-1">
+            <span className="text-sm font-medium">{label(date)}</span>
+            <button type="button" aria-label={`Add workout on ${label(date)}`} onClick={() => onAdd(date)} className="rounded-lg p-1.5 text-muted hover:bg-surface-2"><Plus size={16} /></button>
+          </div>
+          {ws.map((w) => (
+            <Link key={w.id} to={`/training/workout/${w.id}`} className="flex items-center gap-3 py-2.5 hover:bg-surface-2">
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">{w.name}</div>
+                <div className="text-sm text-muted">{fmtDuration(w.finishedAt! - w.startedAt)}{summaryFor(w) ? ` · ${summaryFor(w)}` : ''}</div>
+              </div>
+              <ChevronRight size={18} className="text-muted" />
+            </Link>
+          ))}
+        </section>
+      ))}
+      {groups.length > shown.length && <Button variant="ghost" size="sm" onClick={onMore}>Show older</Button>}
     </div>
   );
 }

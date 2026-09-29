@@ -190,6 +190,39 @@ test('logs a workout, updates the muscle map, and reuses it as a template', asyn
   await expect(page.getByText('80 × 8').first()).toBeVisible(); // last time's sets as hints
 });
 
+test('logs a past workout, shows it under its day and edits it', async ({ page }) => {
+  await seed(page, 3);
+  await page.goto('/training');
+  await page.getByRole('button', { name: 'Log a past workout' }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByLabel('Past workout name').fill('Abs day');
+  await sheet.getByRole('button', { name: 'Add exercises' }).click();
+  await expect(page.getByRole('heading', { name: 'Edit workout' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Add exercise' }).click();
+  const picker = page.getByRole('dialog');
+  await picker.getByLabel('Search exercises').fill('reverse crunch');
+  await picker.getByRole('button', { name: /^Reverse crunch/ }).first().click();
+  await page.getByLabel('Reverse crunch set 1 reps').fill('15');
+  await page.getByLabel('Reverse crunch set 2 reps').fill('12');
+  await expect(page.getByLabel('Reverse crunch set 2 reps')).toHaveValue('12');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+
+  await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible();
+  await expect(page.getByText('15 reps · 12 reps')).toBeVisible(); // blank third set dropped
+  await page.goto('/training');
+  const yesterday = page.getByRole('region', { name: 'Workouts on Yesterday' });
+  await expect(yesterday.getByText('Abs day')).toBeVisible();
+  await expect(yesterday.getByText(/2 sets/)).toBeVisible();
+
+  await yesterday.getByText('Abs day').click();
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByLabel('Workout name').fill('Core');
+  await expect(page.getByLabel('Workout name')).toHaveValue('Core');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Core' })).toBeVisible();
+});
+
 test('tracks supplements and counts protein powder in the food log', async ({ page }) => {
   await seed(page, 3);
   await page.goto('/supplements');

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/db/schema';
 import type { Workout } from '@/db/types';
-import { addExercise, addSet, finishWorkout, saveTemplate, startWorkout, updateSet, createCustomExercise, repeatWorkout } from './actions';
+import { addExercise, addSet, finishWorkout, saveTemplate, startWorkout, updateSet, createCustomExercise, repeatWorkout, logPastWorkout, updateWorkoutTiming, tidyWorkout, localTimestamp, timeOf } from './actions';
+import { addDays, today } from '@/lib/utils/date';
 import { BUILT_IN_EXERCISES, builtInExercise } from './exercises';
 import { e1rm, estimatedBurnKcal, newRecordsIn, personalRecords, previousSets } from './strength';
 import { hardSetCount, setsByMuscle, volumeLoad, weeklySetsByMuscle } from './volume';
@@ -132,5 +133,48 @@ describe('activity sessions', () => {
     expect(sessionSummary(w, lookup, 560)).toBe('90 min active · ~560 kcal');
     const mixed: Workout = { ...w, exercises: [...workout('2026-09-29', 1, [{ kg: 80, reps: 8 }]).exercises, ...w.exercises] };
     expect(sessionSummary(mixed, lookup)).toBe('1 set · 640 kg · 90 min active');
+  });
+});
+
+describe('past workouts', () => {
+  it('logs a finished workout on an earlier day and counts its sets once filled in', async () => {
+    const date = addDays(today(), -3);
+    const w = await logPastWorkout({ date, time: '07:30', durationMin: 45, name: 'Legs' });
+    expect(w.date).toBe(date);
+    expect(w.startedAt).toBe(localTimestamp(date, '07:30'));
+    expect(w.finishedAt! - w.startedAt).toBe(45 * 60_000);
+    await addExercise(w.id, builtInExercise('back-squat')!, 3);
+    await updateSet(w.id, 0, 0, { kg: 100, reps: 5 });
+    await updateSet(w.id, 0, 1, { kg: 100, reps: 5 });
+    const saved = await tidyWorkout(w.id);
+    expect(saved.exercises[0].sets).toHaveLength(2); // the blank third set is dropped
+    expect(saved.exercises[0].sets.every((s) => s.done)).toBe(true);
+    expect(hardSetCount(saved)).toBe(2);
+  });
+
+  it('refuses a future date', async () => {
+    await expect(logPastWorkout({ date: addDays(today(), 1), time: '10:00', durationMin: 30 })).rejects.toThrow();
+  });
+
+  it('pre-fills a template and adds new sets as done', async () => {
+    const t = await saveTemplate(workout('2026-01-01', 1, [{ kg: 60, reps: 10 }, { kg: 60, reps: 10 }]), 'Push');
+    const w = await logPastWorkout({ date: addDays(today(), -1), time: '18:00', durationMin: 60, template: t });
+    expect(w.name).toBe('Push');
+    expect(w.exercises[0].sets).toHaveLength(2);
+    const after = await addSet(w.id, 0);
+    expect(after.exercises[0].sets[2].done).toBe(true);
+  });
+
+  it('moves a workout to another day and time, keeping the duration', async () => {
+    const w = await logPastWorkout({ date: addDays(today(), -1), time: '18:00', durationMin: 50 });
+    const target = addDays(today(), -5);
+    let moved = await updateWorkoutTiming(w.id, { date: target, time: '06:15' });
+    expect(moved.date).toBe(target);
+    expect(timeOf(moved.startedAt)).toBe('06:15');
+    expect(moved.finishedAt! - moved.startedAt).toBe(50 * 60_000);
+    moved = await updateWorkoutTiming(w.id, { durationMin: 70 });
+    expect(moved.finishedAt! - moved.startedAt).toBe(70 * 60_000);
+    moved = await updateWorkoutTiming(w.id, { date: addDays(today(), 2) });
+    expect(moved.date).toBe(target); // future dates are ignored
   });
 });
