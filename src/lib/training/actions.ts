@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/schema';
 import { alive, newRecord } from '@/db/repo';
 import type { CustomExercise, ExerciseDef, Workout, WorkoutExercise, WorkoutSet, WorkoutTemplate } from '@/db/types';
-import { toDateKey } from '@/lib/utils/date';
+import { fromDateKey, toDateKey } from '@/lib/utils/date';
 import { normalizeText } from '@/lib/food-sources/normalize';
 import { BUILT_IN_EXERCISES, builtInExercise } from './exercises';
 import type { ExerciseLookup } from './volume';
@@ -58,7 +58,8 @@ export function useActiveWorkout(): Workout | null | undefined {
   return useLiveQuery(async () => (await db.workouts.toArray()).filter((w) => alive(w) && !w.finishedAt).sort((a, b) => b.startedAt - a.startedAt)[0] ?? null, []);
 }
 
-const emptySet = (prev?: WorkoutSet): WorkoutSet => ({ type: 'working', done: false, kg: prev?.kg, reps: prev?.reps });
+/** Sets added to a finished (past or edited) workout count as done: there is nothing left to tick off. */
+const emptySet = (prev?: WorkoutSet, done = false): WorkoutSet => ({ type: 'working', done, kg: prev?.kg, reps: prev?.reps });
 
 export async function startWorkout(opts: { template?: WorkoutTemplate; name?: string } = {}): Promise<Workout> {
   const now = Date.now();
@@ -68,6 +69,36 @@ export async function startWorkout(opts: { template?: WorkoutTemplate; name?: st
     sets: Array.from({ length: Math.max(1, t.sets) }, () => emptySet()),
   }));
   const w = newRecord({ date: toDateKey(new Date(now)), startedAt: now, name: opts.name ?? opts.template?.name ?? defaultName(now), templateId: opts.template?.id, exercises }) as Workout;
+  await db.workouts.put(w);
+  return w;
+}
+
+/** `YYYY-MM-DD` + `HH:MM` as a local timestamp. */
+export function localTimestamp(date: string, time: string): number {
+  const d = fromDateKey(date);
+  const [h, m] = time.split(':').map(Number);
+  d.setHours(h || 0, m || 0, 0, 0);
+  return d.getTime();
+}
+
+export const timeOf = (ts: number) => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+
+/**
+ * Logs a workout that already happened. It is created finished, so it counts for its date straight away
+ * and opens in the editor to fill in exercises and sets.
+ */
+export async function logPastWorkout(opts: { date: string; time: string; durationMin: number; name?: string; template?: WorkoutTemplate }): Promise<Workout> {
+  if (opts.date > toDateKey()) throw new Error('Pick today or an earlier day.');
+  const startedAt = localTimestamp(opts.date, opts.time);
+  const exercises: WorkoutExercise[] = (opts.template?.exercises ?? []).map((t) => ({
+    exerciseId: t.exerciseId,
+    name: t.name,
+    sets: Array.from({ length: Math.max(1, t.sets) }, () => emptySet(undefined, true)),
+  }));
+  const w = newRecord({
+    date: opts.date, startedAt, finishedAt: startedAt + Math.max(1, Math.round(opts.durationMin)) * 60_000,
+    name: opts.name?.trim() || opts.template?.name || defaultName(startedAt), templateId: opts.template?.id, exercises,
+  }) as Workout;
   await db.workouts.put(w);
   return w;
 }
@@ -98,7 +129,7 @@ function mutate(id: string, fn: (w: Workout) => void): Promise<Workout> {
 }
 
 export const addExercise = (id: string, def: ExerciseDef, sets = 3) =>
-  mutate(id, (w) => { w.exercises.push({ exerciseId: def.id, name: def.name, sets: Array.from({ length: sets }, () => emptySet()) }); });
+  mutate(id, (w) => { w.exercises.push({ exerciseId: def.id, name: def.name, sets: Array.from({ length: sets }, () => emptySet(undefined, !!w.finishedAt)) }); });
 
 export const removeExercise = (id: string, index: number) => mutate(id, (w) => { w.exercises.splice(index, 1); });
 
@@ -110,7 +141,7 @@ export const moveExercise = (id: string, index: number, dir: -1 | 1) =>
   });
 
 export const addSet = (id: string, exIndex: number) =>
-  mutate(id, (w) => { const sets = w.exercises[exIndex].sets; sets.push(emptySet(sets[sets.length - 1])); });
+  mutate(id, (w) => { const sets = w.exercises[exIndex].sets; sets.push(emptySet(sets[sets.length - 1], !!w.finishedAt)); });
 
 export const removeSet = (id: string, exIndex: number, setIndex: number) => mutate(id, (w) => { w.exercises[exIndex].sets.splice(setIndex, 1); });
 
@@ -118,6 +149,25 @@ export const updateSet = (id: string, exIndex: number, setIndex: number, patch: 
   mutate(id, (w) => { Object.assign(w.exercises[exIndex].sets[setIndex], patch); });
 
 export const updateWorkoutMeta = (id: string, patch: Partial<Pick<Workout, 'name' | 'note'>>) => mutate(id, (w) => { Object.assign(w, patch); });
+
+/** Moves a finished workout to another day, start time or duration. */
+export const updateWorkoutTiming = (id: string, patch: { date?: string; time?: string; durationMin?: number }) =>
+  mutate(id, (w) => {
+    const date = patch.date || w.date;
+    if (date > toDateKey()) return;
+    const duration = patch.durationMin !== undefined ? Math.max(1, Math.round(patch.durationMin)) * 60_000 : (w.finishedAt ?? w.startedAt) - w.startedAt;
+    w.date = date;
+    w.startedAt = localTimestamp(date, patch.time || timeOf(w.startedAt));
+    if (w.finishedAt) w.finishedAt = w.startedAt + duration;
+  });
+
+/** After editing a finished workout: drops sets left blank and exercises without sets. */
+export const tidyWorkout = (id: string) =>
+  mutate(id, (w) => {
+    w.exercises = w.exercises
+      .map((ex) => ({ ...ex, sets: ex.sets.filter((s) => s.reps !== undefined || s.kg !== undefined || s.durationSec !== undefined).map((s) => ({ ...s, done: true })) }))
+      .filter((ex) => ex.sets.length > 0);
+  });
 
 /** Finish: drops sets that were never completed and exercises left empty. */
 export const finishWorkout = (id: string) =>
