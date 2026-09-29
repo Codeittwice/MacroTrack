@@ -17,12 +17,12 @@ All plan waves are implemented. The app works as a browser PWA, as an Android AP
 | Import history from MyFitnessPal / MacroFactor / any CSV (idempotent) | done |
 | Reminders: weigh-in, food log, water and weekly check-in. Android: local notifications (verified). Web/desktop: dashboard prompts | done |
 | Body fat estimator (US Navy tape, waist-only RFM, visual guide) wired to onboarding/profile/weigh-in; neck measurement; Progress body composition (BF %, lean/fat mass) | done (2026-09-28) |
-| Training tab (replaces Weight tab; Weight log under More): ~100 built-in exercises + custom, live workout with rest timer and last-time hints, templates, PRs/e1RM, front/back muscle map of weekly hard sets (10–20 guideline); burn estimate is informational only | done (2026-09-28) |
+| Training tab (replaces Weight tab; Weight log under More): ~100 built-in exercises + custom, live workout with rest timer and last-time hints, templates, PRs/e1RM, front/back muscle map of weekly hard sets (10–20 guideline); net burn estimate (MET − 1), cardio logged in minutes; Settings → Exercise calories Off/Half/Full adds it to that day's target as carbs (default Off) | done (2026-09-29) |
 | Supplements: daily checklist (dashboard + page), adherence/streak, Android reminders (ids 200+), protein powder etc. add food-log entries | done (2026-09-28) |
 | Android: icons, splash, edge-to-edge insets, dark system bars | done, emulator-verified |
 | Windows: exe + NSIS installer; data survives a restart | done, verified |
 
-Verification at the last commit: `npm run build` ✓, `npm test` 314 ✓, `npm run e2e` 20 ✓ (desktop and Pixel 7), `npm run desktop:build` ✓, Android debug APK installed and exercised on the Pixel 7 API 35 emulator.
+Verification at the last commit: `npm run build` ✓, `npm test` 315 ✓, `npm run e2e` 23 ✓ (desktop and Pixel 7), `npm run desktop:build` ✓, Android debug APK installed and exercised on the Pixel 7 API 35 emulator.
 
 ## Fixes in the 2026-09-25 Claude pass (what the audit of Codex's work found)
 
@@ -58,3 +58,9 @@ Verification at the last commit: `npm run build` ✓, `npm test` 314 ✓, `npm r
 
 ## Schema notes (v2, 2026-09-28)
 Dexie `version(2)` adds `exercises`, `workouts`, `workoutTemplates`, `supplements`, `supplementLogs`. Backups include them; backups from before v2 still restore (these tables are optional). Workout edits go through a per-workout queue in `src/lib/training/actions.ts`, because unawaited input updates used to overwrite each other.
+
+## Dev server note
+The Browser-pane preview server (`.claude/launch.json`) sometimes starts with a different Vite root and serves this project through `/@fs/` with stale transforms. If UI changes don't show up, stop it and run `npx vite --port 5173` from the project root.
+
+## Android SDK note (2026-09-29)
+The `android-35` system image had disappeared from `D:\Programs\Android\SDK`. It was reinstalled with the new `cmdline-tools/latest/bin/sdkmanager.bat`. Launch the emulator with `ANDROID_SDK_ROOT` set, and use `-gpu swiftshader_indirect` if it hangs while offline.
