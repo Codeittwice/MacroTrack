@@ -60,6 +60,8 @@ export interface ProviderRequest {
   instructions: string;
   userText: string;
   image?: MealImage;
+  /** Ask OpenAI/Gemini for JSON output (default true). Plain-text tasks such as translation turn it off. */
+  json?: boolean;
 }
 
 /**
@@ -68,7 +70,7 @@ export interface ProviderRequest {
  * opt-in. Photos use the provider's vision model.
  */
 export async function askProvider(req: ProviderRequest, fetcher: Fetcher = fetch): Promise<string> {
-  const { provider, apiKey, instructions, userText, image } = req;
+  const { provider, apiKey, instructions, userText, image, json = true } = req;
   const combined = `${instructions}\n\n${userText}`;
   let text: string | undefined;
   if (provider === 'claude') {
@@ -91,7 +93,7 @@ export async function askProvider(req: ProviderRequest, fetcher: Fetcher = fetch
     const response = await fetcher('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: image ? VISION_MODELS.openai : MODELS.openai, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: instructions }, { role: 'user', content: user }] }),
+      body: JSON.stringify({ model: image ? VISION_MODELS.openai : MODELS.openai, ...(json ? { response_format: { type: 'json_object' } } : {}), messages: [{ role: 'system', content: instructions }, { role: 'user', content: user }] }),
     });
     await requireOk(response);
     const data = await response.json() as { choices?: { message?: { content?: string } }[] };
@@ -101,7 +103,7 @@ export async function askProvider(req: ProviderRequest, fetcher: Fetcher = fetch
     const response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:generateContent`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseMimeType: 'application/json' } }),
+      body: JSON.stringify({ contents: [{ parts }], ...(json ? { generationConfig: { responseMimeType: 'application/json' } } : {}) }),
     });
     await requireOk(response);
     const data = await response.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };

@@ -10,6 +10,13 @@ const BRAND_PREFIXES: { phrase: string; canonical: string }[] = [
   { phrase: 'lidl', canonical: 'lidl' },
   { phrase: 'aldi', canonical: 'aldi' },
   { phrase: 'plus', canonical: 'plus' },
+  { phrase: 'kaufland', canonical: 'kaufland' },
+  { phrase: 'кауфланд', canonical: 'kaufland' },
+  { phrase: 'billa', canonical: 'billa' },
+  { phrase: 'била', canonical: 'billa' },
+  { phrase: 'fantastico', canonical: 'fantastico' },
+  { phrase: 'фантастико', canonical: 'fantastico' },
+  { phrase: 'лидл', canonical: 'lidl' },
 ];
 
 /** Lowercase, strip diacritics, replace punctuation with spaces, collapse whitespace. */

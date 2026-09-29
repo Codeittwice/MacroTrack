@@ -108,3 +108,21 @@ describe('OFF servings', () => {
     expect(offProductToFoodItem({ ...base, serving_quantity: 0 } as never)!.servings).toEqual([{ label: '100 g', grams: 100 }]);
   });
 });
+
+describe('OFF product region', () => {
+  it('searches Bulgaria, or both countries, per the setting', async () => {
+    const { db } = await import('@/db/schema');
+    const { DEFAULT_SETTINGS } = await import('@/db/repo');
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => { urls.push(url); return new Response(JSON.stringify({ products: [] }), { status: 200 }); }));
+    await db.settings.put({ ...DEFAULT_SETTINGS, productRegion: 'bg', updatedAt: 1 });
+    await offSource.search('кашкавал');
+    expect(urls[0]).toContain('bg.openfoodfacts.org');
+    expect(urls[0]).toContain('countries_tags=bulgaria');
+    urls.length = 0;
+    await db.settings.put({ ...DEFAULT_SETTINGS, productRegion: 'both', updatedAt: 2 });
+    await offSource.search('kaas jong');
+    expect(urls.map((u) => new URL(u).host)).toEqual(['nl.openfoodfacts.org', 'bg.openfoodfacts.org']);
+    await db.settings.clear();
+  });
+});

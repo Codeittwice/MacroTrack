@@ -19,6 +19,8 @@ export const DEFAULT_SETTINGS: Settings = {
   logReminderEnabled: false,
   logReminderTime: '21:00',
   exerciseCalories: 'off',
+  productRegion: 'nl',
+  voiceLanguage: 'auto',
   checkInReminderEnabled: false,
   checkInReminderTime: '09:00',
   syncEnabled: false,

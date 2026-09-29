@@ -105,6 +105,10 @@ export interface Settings {
    * reflects training), 'half' or 'full' of the estimated net burn.
    */
   exerciseCalories: 'off' | 'half' | 'full';
+  /** Open Food Facts country for branded products: Netherlands, Bulgaria, or both. */
+  productRegion: 'nl' | 'bg' | 'both';
+  /** Speech recognition language for describing meals by voice ('auto' = device language). */
+  voiceLanguage: 'auto' | 'en-US' | 'nl-NL' | 'bg-BG';
   /** Notification on the profile's weekly check-in day. */
   checkInReminderEnabled: boolean;
   checkInReminderTime: string;

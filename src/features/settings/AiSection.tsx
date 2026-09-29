@@ -67,6 +67,15 @@ export function AiSection() {
         <ApiKeyField key={p.value} label={p.label} value={settings.apiKeys[p.value]} onSave={(v) => saveKey(p.value, v)} />
       ))}
       <TestKey provider={settings.aiProvider} apiKey={settings.apiKeys[settings.aiProvider]} />
+      <div className="mb-3">
+        <div className="mb-1.5 text-sm text-muted">Voice language</div>
+        <Segmented<Settings['voiceLanguage']>
+          options={[{ value: 'auto', label: 'Auto' }, { value: 'en-US', label: 'English' }, { value: 'nl-NL', label: 'Nederlands' }, { value: 'bg-BG', label: 'Български' }]}
+          value={settings.voiceLanguage ?? 'auto'}
+          onChange={(voiceLanguage) => void updateSettings({ voiceLanguage })}
+        />
+        <p className="mt-1.5 text-xs text-muted">Bulgarian descriptions are translated to English before estimating. On the Windows app, voice input needs a Gemini or OpenAI key.</p>
+      </div>
       <p className="text-xs text-muted">Keys are stored only on this device and are sent only to the provider you choose.</p>
     </Section>
   );

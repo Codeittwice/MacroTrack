@@ -4,6 +4,7 @@ import { ProfileSection } from './ProfileSection';
 import { TargetsSection } from './TargetsSection';
 import { AppearanceSection } from './AppearanceSection';
 import { ExerciseCaloriesSection } from './ExerciseCaloriesSection';
+import { FoodSearchSection } from './FoodSearchSection';
 import { UnitsSection } from './UnitsSection';
 import { MealsSection } from './MealsSection';
 import { WaterSection } from './WaterSection';
@@ -28,6 +29,7 @@ export default function SettingsPage() {
         </>
       )}
 
+      <FoodSearchSection />
       <ExerciseCaloriesSection />
       <AppearanceSection />
       <UnitsSection />

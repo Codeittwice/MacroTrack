@@ -23,6 +23,7 @@
     "desktop:build": "tauri build"
   },
   "dependencies": {
+    "@capacitor-community/speech-recognition": "^7.0.1",
     "@capacitor/android": "^7.4.0",
     "@capacitor/core": "^7.4.0",
     "@capacitor/filesystem": "^7.1.8",

@@ -4,7 +4,7 @@
  */
 import { z } from 'zod';
 import { db } from '@/db/schema';
-import { alive } from '@/db/repo';
+import { alive, getSettings } from '@/db/repo';
 import type { FoodItem, FoodSource, Nutrients, StoredFood } from '@/db/types';
 import { normalizeQuery, normalizeText } from './normalize';
 
@@ -17,6 +17,7 @@ const productSchema = z.object({
   code: nullableCode,
   product_name: nullableText,
   product_name_nl: nullableText,
+  product_name_bg: nullableText,
   product_name_en: nullableText,
   generic_name: nullableText,
   brands: nullableText,
@@ -74,7 +75,7 @@ function nutrientsFromProduct(product: OffProduct): Nutrients {
 /** Convert a public Open Food Facts product into the app's source-neutral model. */
 export function offProductToFoodItem(product: OffProduct, fallbackBarcode?: string): FoodItem | undefined {
   const barcode = productCode(product, fallbackBarcode);
-  const name = firstText(product.product_name_nl, product.product_name, product.product_name_en, product.generic_name);
+  const name = firstText(product.product_name_nl, product.product_name, product.product_name_bg, product.product_name_en, product.generic_name);
   if (!barcode || !name) return undefined;
 
   return {
@@ -156,7 +157,7 @@ async function fetchJson(url: string): Promise<unknown> {
   return response.json();
 }
 
-const BRAND_NAMES: Record<string, string> = { ah: 'albert heijn', 'albert heijn': 'albert heijn', jumbo: 'jumbo', lidl: 'lidl', aldi: 'aldi', plus: 'plus' };
+const BRAND_NAMES: Record<string, string> = { ah: 'albert heijn', 'albert heijn': 'albert heijn', jumbo: 'jumbo', lidl: 'lidl', aldi: 'aldi', plus: 'plus', kaufland: 'kaufland', billa: 'billa', fantastico: 'fantastico' };
 
 /**
  * Turns a typed query into Open Food Facts search terms. OFF does literal full-text matching, so
@@ -196,8 +197,22 @@ function takeSearchSlot(): boolean {
   return true;
 }
 
-async function fetchSearch(terms: string, limit: number): Promise<FoodItem[]> {
-  const cached = queryCache.get(terms);
+export type OffRegion = 'nl' | 'bg';
+const COUNTRY: Record<OffRegion, { host: string; tag: string }> = {
+  nl: { host: 'https://nl.openfoodfacts.org', tag: 'netherlands' },
+  bg: { host: 'https://bg.openfoodfacts.org', tag: 'bulgaria' },
+};
+
+/** Regions to search, from Settings > Food search. Cyrillic queries search Bulgaria first. */
+export async function searchRegions(query: string): Promise<OffRegion[]> {
+  const setting = (await getSettings()).productRegion ?? 'nl';
+  if (setting !== 'both') return [setting];
+  return /[\u0400-\u04FF]/.test(query) ? ['bg', 'nl'] : ['nl', 'bg'];
+}
+
+async function fetchSearch(terms: string, limit: number, region: OffRegion = 'nl'): Promise<FoodItem[]> {
+  const key = `${region}:${terms}`;
+  const cached = queryCache.get(key);
   if (cached && Date.now() - cached.at < QUERY_CACHE_MS) return cached.foods;
   if (!takeSearchSlot()) {
     lastStatus = 'limited';
@@ -209,13 +224,13 @@ async function fetchSearch(terms: string, limit: number): Promise<FoodItem[]> {
     action: 'process',
     json: '1',
     page_size: String(Math.min(Math.max(limit, 1), 100)),
-    countries_tags: 'netherlands',
+    countries_tags: COUNTRY[region].tag,
     // Only what offProductToFoodItem reads: ~5% of the full product payload.
-    fields: 'code,product_name,product_name_nl,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity',
+    fields: 'code,product_name,product_name_nl,product_name_bg,product_name_en,generic_name,brands,nutriments,serving_size,serving_quantity',
   });
-  const data = searchResponseSchema.parse(await fetchJson(`${API_BASE}/cgi/search.pl?${params}`));
+  const data = searchResponseSchema.parse(await fetchJson(`${COUNTRY[region].host}/cgi/search.pl?${params}`));
   const foods = data.products.map((product) => offProductToFoodItem(product)).filter((food): food is FoodItem => !!food).slice(0, limit);
-  queryCache.set(terms, { at: Date.now(), foods });
+  queryCache.set(key, { at: Date.now(), foods });
   await Promise.all(foods.map(cacheOffFood));
   return foods;
 }
@@ -225,11 +240,16 @@ async function searchOff(query: string, limit = 25): Promise<FoodItem[]> {
   if (withoutBrand.length < 3) return cachedOffSearch(query.trim(), limit);
 
   try {
-    let foods = await fetchSearch(terms, limit);
-    // A brand we mapped wrongly shouldn't hide every product; retry on the product words alone.
-    if (foods.length === 0 && terms !== withoutBrand) foods = await fetchSearch(withoutBrand, limit);
+    const regions = await searchRegions(query);
+    const all: FoodItem[] = [];
+    for (const region of regions) {
+      let foods = await fetchSearch(terms, limit, region);
+      // A brand we mapped wrongly shouldn't hide every product; retry on the product words alone.
+      if (foods.length === 0 && terms !== withoutBrand) foods = await fetchSearch(withoutBrand, limit, region);
+      for (const f of foods) if (!all.some((x) => x.id === f.id)) all.push(f);
+    }
     lastStatus = 'ok';
-    return foods;
+    return all.slice(0, limit);
   } catch {
     // The API answers bursts with 429s that browsers surface as opaque network errors.
     if (lastStatus !== 'limited') lastStatus = typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : 'limited';

@@ -243,3 +243,21 @@ test('adds workout calories to the day target when the setting is on', async ({ 
   await page.goto('/');
   await expect(page.getByText(/Includes \+\d+ kcal from today's training/)).toBeVisible();
 });
+
+test('translates a Bulgarian meal description to English before estimating', async ({ page }) => {
+  await seed(page, 2);
+  await page.evaluate(async () => {
+    const { updateSettings } = await import(/* @vite-ignore */ '/src/db/repo.ts');
+    await updateSettings({ aiProvider: 'claude', apiKeys: { claude: 'test-key' } });
+  });
+  await page.route('https://api.anthropic.com/**', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ content: [{ type: 'text', text: 'two slices of bread with kashkaval cheese' }] }),
+  }));
+  await page.goto('/log?add=0&tab=ai');
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Meal description').fill('две филийки хляб с кашкавал');
+  await dialog.getByRole('button', { name: 'Translate to English' }).click();
+  await expect(dialog.getByLabel('Meal description')).toHaveValue('two slices of bread with kashkaval cheese');
+  await expect(dialog.getByText('Translated from Bulgarian: две филийки хляб с кашкавал')).toBeVisible();
+});

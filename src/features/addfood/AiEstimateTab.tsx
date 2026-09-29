@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
-import { Camera, Sparkles, Trash2, X } from 'lucide-react';
+import { Camera, Languages, Mic, Sparkles, Square, Trash2, X } from 'lucide-react';
 import { Button, Input, NumberInput, SourceBadge } from '@/components/ui';
 import { useSettings } from '@/app/hooks';
 import type { DateKey } from '@/db/types';
 import { estimateMeal, groundEstimate, type GroundedEstimateItem, type MealImage } from '@/lib/ai';
 import { prepareMealPhoto } from './mealPhoto';
+import { hasCyrillic, translateToEnglish } from '@/lib/ai';
+import { resolveLang, speechMethod, startListening, type SpeechSession } from '@/lib/native/speech';
 import { addLogEntry } from '@/lib/log/actions';
 import { fmtKcal } from './format';
 
@@ -20,6 +22,51 @@ export function AiEstimateTab({ date, meal, onLogged }: { date: DateKey; meal: n
   const [photo, setPhoto] = useState<{ image: MealImage; previewUrl: string } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const apiKey = settings.apiKeys[settings.aiProvider];
+  const [listening, setListening] = useState<SpeechSession | null>(null);
+  const [heard, setHeard] = useState('');
+  const [original, setOriginal] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const voice = speechMethod(settings.aiProvider, apiKey);
+
+  const translate = async (text: string) => {
+    if (!apiKey) { setStatus('Add an API key in Settings to translate Bulgarian.'); return; }
+    setTranslating(true);
+    try {
+      const english = await translateToEnglish(text, settings.aiProvider, apiKey);
+      setOriginal(text);
+      setDescription(english);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'The description could not be translated.');
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  const toggleVoice = async () => {
+    if (listening) { listening.stop(); return; }
+    setStatus(null);
+    setOriginal(null);
+    try {
+      const session = await startListening({
+        lang: resolveLang(settings.voiceLanguage ?? 'auto'),
+        provider: settings.aiProvider,
+        apiKey,
+        onPartial: setHeard,
+        onFinal: (text) => {
+          setListening(null);
+          setHeard('');
+          if (!text) { setStatus("Didn't catch that. Try again a little closer to the microphone."); return; }
+          const combined = description.trim() ? `${description.trim()} ${text}` : text;
+          if (hasCyrillic(combined)) void translate(combined);
+          else setDescription(combined);
+        },
+        onError: (message) => { setListening(null); setHeard(''); setStatus(message); },
+      });
+      setListening(session);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Voice input could not start.');
+    }
+  };
 
   const choosePhoto = async (file: File | undefined) => {
     if (!file) return;
@@ -58,7 +105,19 @@ export function AiEstimateTab({ date, meal, onLogged }: { date: DateKey; meal: n
   };
 
   return <div className="flex flex-col gap-4">
-    <div><label className="mb-1.5 block text-sm text-muted" htmlFor="meal-description">{photo ? 'Anything to add? (optional)' : 'Meal description'}</label><Input id="meal-description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder={photo ? 'e.g. I only ate half' : 'e.g. 2 AH turkse broodjes with kipfilet and hummus'} autoFocus /></div>
+    <div><label className="mb-1.5 block text-sm text-muted" htmlFor="meal-description">{photo ? 'Anything to add? (optional)' : 'Meal description'}</label><Input id="meal-description" value={description} onChange={(event) => setDescription(event.target.value)} placeholder={photo ? 'e.g. I only ate half' : 'e.g. 2 AH turkse broodjes with kipfilet and hummus'} autoFocus />
+      {voice !== 'none' && (
+        <Button variant={listening ? 'danger' : 'secondary'} className="mt-2 w-full" onClick={() => void toggleVoice()} aria-label={listening ? 'Stop listening' : 'Describe by voice'}>
+          {listening ? <><Square size={16} /> Stop</> : <><Mic size={18} /> Describe by voice</>}
+        </Button>
+      )}
+      {listening && <p role="status" className="mt-2 text-sm text-muted">{heard || 'Listening… say what you ate.'}</p>}
+      {translating && <p role="status" className="mt-2 text-sm text-muted">Translating to English…</p>}
+      {original && <p className="mt-2 text-xs text-muted">Translated from Bulgarian: {original}</p>}
+      {!original && !translating && hasCyrillic(description) && (
+        <Button size="sm" variant="ghost" className="mt-1" onClick={() => void translate(description)}><Languages size={16} /> Translate to English</Button>
+      )}
+    </div>
     {items.length === 0 && (photo ? (
       <div className="relative self-start">
         <img src={photo.previewUrl} alt="Meal photo to estimate" className="max-h-48 rounded-xl" />
