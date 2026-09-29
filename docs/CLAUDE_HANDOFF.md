@@ -71,6 +71,7 @@ Plan:
 ## Fixes 2026-09-29 (afternoon, Claude)
 - **Android keyboard covering fields (real cause):** with targetSdk 35 the app is edge-to-edge, where `adjustResize` no longer shrinks the window, and Capacitor's `adjustMarginsForEdgeToEdge` listener only reserves the system bars. `MainActivity.java` now replaces that listener and sets the WebView's bottom margin to max(system bars, IME). Verified on the emulator: innerHeight 839 → 527 with the keyboard open, back to 839 when closed; the weight sheet's Note field and Save stay visible.
 - **Search in English ("butter", "chicken", "potato", "bread"):** `matchTier` in `src/lib/food-sources/search.ts` now ranks on the better of the Dutch and English NEVO names, with tie-breaks: Dutch-name match, then plain foods before NEVO back-to-front compounds ("Boter chocolade-"). Synonyms added: bread→brood, potato(es)→aardappel.
+- **Muscle map missed sessions:** `finishWorkout` used to drop every set whose tick box wasn't tapped, so a session typed in without ticking lost its sets. Finish now keeps ticked OR filled-in sets (`isFilled`); `tidyWorkout` (finished workouts, sets start ticked) still keeps filled-in only. The Training map also counts the in-progress workout's ticked sets.
 
 ## Known gaps / next steps
 

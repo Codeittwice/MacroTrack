@@ -85,6 +85,15 @@ describe('strength', () => {
 });
 
 describe('workout actions', () => {
+  it('keeps sets that were filled in but not ticked when finishing', async () => {
+    const w = await startWorkout({ name: 'Pull' });
+    await addExercise(w.id, bench, 3);
+    await updateSet(w.id, 0, 0, { kg: 60, reps: 10, done: true });
+    await updateSet(w.id, 0, 1, { kg: 60, reps: 9 }); // typed, tick box not tapped
+    const done = await finishWorkout(w.id); // set 3 was left blank
+    expect(done.exercises[0].sets.map((s) => [s.reps, s.done])).toEqual([[10, true], [9, true]]);
+  });
+
   it('logs a workout, drops unfinished sets on finish, and round-trips through a template', async () => {
     const w = await startWorkout({ name: 'Push' });
     await addExercise(w.id, bench, 2);

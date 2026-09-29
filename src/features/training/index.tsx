@@ -37,7 +37,8 @@ function TrainingHome() {
   const [pastFor, setPastFor] = useState<string | null>(null);
   const [days, setDays] = useState(14);
   const finished = useMemo(() => (workouts ?? []).filter((w) => w.finishedAt), [workouts]);
-  const weekly = useMemo(() => weeklySetsByMuscle(finished, today(), lookup), [finished, lookup]);
+  // Include the workout in progress: its ticked sets show up as soon as they're done.
+  const weekly = useMemo(() => weeklySetsByMuscle(active ? [...finished, active] : finished, today(), lookup), [finished, active, lookup]);
   const weeklySets = useMemo(() => Object.fromEntries(Object.entries(weekly).map(([m, v]) => [m, v?.sets ?? 0])) as Partial<Record<Muscle, number>>, [weekly]);
   const thisWeek = finished.filter((w) => w.date > addDays(today(), -7)).length;
 

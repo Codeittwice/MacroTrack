@@ -161,19 +161,27 @@ export const updateWorkoutTiming = (id: string, patch: { date?: string; time?: s
     if (w.finishedAt) w.finishedAt = w.startedAt + duration;
   });
 
-/** After editing a finished workout: drops sets left blank and exercises without sets. */
-export const tidyWorkout = (id: string) =>
-  mutate(id, (w) => {
-    w.exercises = w.exercises
-      .map((ex) => ({ ...ex, sets: ex.sets.filter((s) => s.reps !== undefined || s.kg !== undefined || s.durationSec !== undefined).map((s) => ({ ...s, done: true })) }))
-      .filter((ex) => ex.sets.length > 0);
-  });
+/** A set with anything typed into it. */
+export const isFilled = (s: WorkoutSet) => s.reps !== undefined || s.kg !== undefined || s.durationSec !== undefined;
 
-/** Finish: drops sets that were never completed and exercises left empty. */
+/** Keeps the sets that pass `keep` (all marked done) and drops exercises left empty. */
+function keepSets(w: Workout, keep: (s: WorkoutSet) => boolean) {
+  w.exercises = w.exercises
+    .map((ex) => ({ ...ex, sets: ex.sets.filter(keep).map((s) => ({ ...s, done: true })) }))
+    .filter((ex) => ex.sets.length > 0);
+}
+
+/** After editing a finished workout (its sets start ticked): drops sets left blank and exercises without sets. */
+export const tidyWorkout = (id: string) => mutate(id, (w) => keepSets(w, isFilled));
+
+/**
+ * Finish. A set the user typed kg/reps into counts even if its tick box wasn't tapped: people
+ * logging after the fact rarely tick every set, and dropping them lost whole sessions.
+ */
 export const finishWorkout = (id: string) =>
   mutate(id, (w) => {
     w.finishedAt = Date.now();
-    w.exercises = w.exercises.map((ex) => ({ ...ex, sets: ex.sets.filter((s) => s.done) })).filter((ex) => ex.sets.length > 0);
+    keepSets(w, (s) => s.done || isFilled(s));
   });
 
 export async function deleteWorkout(id: string): Promise<void> {

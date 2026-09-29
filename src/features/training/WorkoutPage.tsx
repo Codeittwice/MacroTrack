@@ -7,7 +7,7 @@ import type { Muscle, Workout } from '@/db/types';
 import { useTrend } from '@/lib/weight/queries';
 import { useSettings } from '@/app/hooks';
 import {
-  addExercise, addSet, deleteWorkout, finishWorkout, moveExercise, removeExercise, removeSet, repeatWorkout, saveTemplate, tidyWorkout,
+  addExercise, addSet, isFilled, deleteWorkout, finishWorkout, moveExercise, removeExercise, removeSet, repeatWorkout, saveTemplate, tidyWorkout,
   timeOf, updateSet, updateWorkoutMeta, updateWorkoutTiming, useExerciseLookup, useWorkout, useWorkouts,
 } from '@/lib/training/actions';
 import { estimatedBurnKcal, newRecordsIn, previousSets } from '@/lib/training/strength';
@@ -53,7 +53,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
     if (done && lookup(workout.exercises[ex].exerciseId)?.kind !== 'cardio') setRestEnd(Date.now() + restFor * 1000);
   };
 
-  const anyDone = workout.exercises.some((e) => e.sets.some((s) => s.done));
+  const anyDone = workout.exercises.some((e) => e.sets.some((s) => s.done || isFilled(s)));
 
   return (
     <div className={cx('mx-auto flex max-w-2xl flex-col gap-4', restEnd ? 'pb-44' : 'pb-24')}>
