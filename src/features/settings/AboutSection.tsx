@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { loadNevo, nevoCredit } from '@/lib/food-sources/nevo';
+import { loadNevoHeader, nevoCredit } from '@/lib/food-sources/nevo';
 import { Section } from './Section';
 import { APP_VERSION } from './version';
 
 export function AboutSection() {
   const [nevo, setNevo] = useState<{ credit: string; count: number } | null>(null);
   useEffect(() => {
-    void loadNevo().then((file) => setNevo({ credit: nevoCredit(file.header.version !== 'none' ? file.header.version : undefined), count: file.header.count })).catch(() => undefined);
+    void loadNevoHeader().then((h) => h && setNevo({ credit: nevoCredit(h.version !== 'none' ? h.version : undefined), count: h.count }));
   }, []);
   return (
     <Section title="About">

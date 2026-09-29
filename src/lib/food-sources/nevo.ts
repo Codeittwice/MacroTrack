@@ -162,3 +162,18 @@ export function reversedCompounds(name: string): string[] {
   const words = name.split(/\s+/);
   return words.slice(1).filter((w) => w.length > 2 && w.endsWith('-')).map((w) => (w.slice(0, -1) + words[0]).toLowerCase());
 }
+
+let headerPromise: Promise<NevoFile['header'] | undefined> | null = null;
+
+/**
+ * Just the dataset header (version, count) for the About/credit text. Unlike loadNevo() it doesn't
+ * build the search index, so opening Settings stays cheap.
+ */
+export function loadNevoHeader(): Promise<NevoFile['header'] | undefined> {
+  if (header) return Promise.resolve(header);
+  headerPromise ??= fetch('/data/nevo.json')
+    .then((r) => (r.ok ? (r.json() as Promise<NevoFile>) : undefined))
+    .then((f) => f?.header)
+    .catch(() => { headerPromise = null; return undefined; });
+  return headerPromise;
+}

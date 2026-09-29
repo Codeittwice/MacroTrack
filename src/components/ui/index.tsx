@@ -162,6 +162,7 @@ export function Segmented<T extends string | number>({
       {options.map((o) => (
         <button
           key={String(o.value)}
+          aria-pressed={o.value === value}
           onClick={() => onChange(o.value)}
           className={clsx(
             'flex-1 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm transition',

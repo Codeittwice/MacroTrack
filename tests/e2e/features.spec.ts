@@ -115,6 +115,7 @@ test('switching to light theme and pounds is reflected across the app', async ({
   await page.getByRole('button', { name: 'Light', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.getByRole('button', { name: 'lb', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'lb', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.goto('/weight');
   await expect(page.getByText(/lb/).first()).toBeVisible();
 });
@@ -152,7 +153,9 @@ test('estimates body fat with a tape measure and tracks body composition', async
   await m.getByLabel('hips measurement').fill('97');
   await expect(m.getByText(/body fat/).first()).toBeVisible();
   await m.getByRole('button', { name: 'Save as my body fat' }).click();
+  await expect(m.getByRole('button', { name: 'Saved' })).toBeVisible();
   await m.getByRole('button', { name: 'Save measurements' }).click();
+  await expect(m).toBeHidden();
 
   await page.goto('/progress');
   await expect(page.getByText('Body composition')).toBeVisible();
@@ -224,6 +227,7 @@ test('adds workout calories to the day target when the setting is on', async ({ 
   await seed(page, 3);
   await page.goto('/settings');
   await page.getByRole('button', { name: 'Full', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Full', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.goto('/training');
   await page.getByRole('button', { name: 'Start workout or activity' }).click();
   await page.getByRole('button', { name: 'Add exercise' }).click();
