@@ -182,4 +182,18 @@ describe('ranking against real NEVO naming', () => {
   it('understands NEVO reversed compounds ("Melk karne-" is karnemelk)', async () => {
     expect((await names('karnemelk'))[0]).toBe('Melk karne-');
   });
+
+  it('ranks on the English name too, and puts the plain food before compounds', async () => {
+    const row = (code: number, nl: string, en: string): NevoRow => [code, nl, en, '', 'Test', 'g', 100, 1, 1, 1, null, null, null, null, null];
+    __setNevoDataForTest([
+      row(1, 'Koekje roomboter- gem', 'Biscuits assorted w butter av'), row(2, 'Pindakaas', 'Peanut butter'),
+      row(3, 'Boter chocolade-', 'Chocolate butter'), row(4, 'Boter ongezouten', 'Butter unsalted'),
+      row(5, 'Ei kippen- rauw gem', 'Egg chicken raw av'), row(6, 'Kipfilet rauw', 'Chicken fillet raw'),
+      row(7, 'Aardappelpureepoeder gem', 'Potato puree powder av'), row(8, 'Aardappelen z schil gekookt gem', 'Potatoes wo skin boiled av'),
+    ]);
+    expect((await names('butter'))[0]).toBe('Boter ongezouten');
+    expect((await names('boter'))[0]).toBe('Boter ongezouten');
+    expect((await names('chicken'))[0]).toBe('Kipfilet rauw');
+    expect((await names('potato'))[0]).toBe('Aardappelen z schil gekookt gem');
+  });
 });

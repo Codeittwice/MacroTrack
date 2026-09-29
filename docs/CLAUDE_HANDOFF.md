@@ -68,6 +68,10 @@ Plan:
   - e2e: speech isn't available headless, so stub the speech helper and assert the translated text appears
   - Android: the permission prompt and recognition on the emulator (host mic)
 
+## Fixes 2026-09-29 (afternoon, Claude)
+- **Android keyboard covering fields (real cause):** with targetSdk 35 the app is edge-to-edge, where `adjustResize` no longer shrinks the window, and Capacitor's `adjustMarginsForEdgeToEdge` listener only reserves the system bars. `MainActivity.java` now replaces that listener and sets the WebView's bottom margin to max(system bars, IME). Verified on the emulator: innerHeight 839 → 527 with the keyboard open, back to 839 when closed; the weight sheet's Note field and Save stay visible.
+- **Search in English ("butter", "chicken", "potato", "bread"):** `matchTier` in `src/lib/food-sources/search.ts` now ranks on the better of the Dutch and English NEVO names, with tie-breaks: Dutch-name match, then plain foods before NEVO back-to-front compounds ("Boter chocolade-"). Synonyms added: bread→brood, potato(es)→aardappel.
+
 ## Known gaps / next steps
 
 1. **NEVO: done (2026-09-27).** NEVO-online 2025/9.0 (2328 foods) is bundled in `public/data/nevo.json` with values unchanged and RIVM's required credit. The raw RIVM files live in `data/raw/`, which git ignores. When RIVM publishes a new version, download it, put it in `data/raw/`, run `npx tsx scripts/build-nevo.ts data/raw/<file>.csv` and rebuild. The terms forbid charging users for NEVO data, so ask nevo@rivm.nl before publishing a paid app.
@@ -76,7 +80,7 @@ Plan:
 4. Optional: Supabase sync. For now, move data between phone and PC with Backup → Save/share → Restore.
 5. Optional: a signed release APK and Play Store listing. Only debug builds are signed today.
 6. Verify the Android keyboard fix on a real device, typing in bottom sheets such as Quick add and the workout sets.
-7. "boterham" ranks rolls before sliced bread in NEVO search (minor).
+7. Verify the keyboard fix on a real phone (emulator verified).
 8. Sports minutes aren't shown on the muscle map; it counts strength hard sets only, by design.
 9. The e2e test "weekly check-in proposes targets…" now waits for the "Targets updated for today." status before navigating; the focused repeat passed 10/10 on 2026-09-29. On this Windows machine, Playwright's dev server can saturate or hang during shutdown with high parallelism, so use `--workers=1` for reliable local e2e verification.
 10. Rebuild `release/` (APK and installer) after any change. Cloud sessions can't: the Android SDK and Rust live on the user's PC.
