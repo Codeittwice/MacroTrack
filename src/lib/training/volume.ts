@@ -5,7 +5,8 @@ import { addDays } from '@/lib/utils/date';
 export const WEEKLY_SET_TARGET = { min: 10, max: 20 } as const;
 
 /** A set counts toward volume when it's a completed working set (warm-ups are excluded). */
-export const isHardSet = (set: { type: string; done: boolean }) => set.done && set.type === 'working';
+export const isHardSet = (set: { type: string; done: boolean; reps?: number; durationSec?: number }) =>
+  set.done && set.type === 'working' && !(set.durationSec && !set.reps); // timed activity entries aren't strength sets
 
 export type ExerciseLookup = (id: string) => ExerciseDef | undefined;
 
@@ -56,4 +57,32 @@ export function volumeLoad(workout: Workout): number {
 
 export function hardSetCount(workout: Workout): number {
   return workout.exercises.reduce((n, ex) => n + ex.sets.filter(isHardSet).length, 0);
+}
+
+/** Minutes logged on cardio and sports entries (completed only). */
+export function activeMinutes(workout: Workout, lookup: ExerciseLookup): number {
+  let sec = 0;
+  for (const ex of workout.exercises) {
+    if (lookup(ex.exerciseId)?.kind !== 'cardio') continue;
+    for (const s of ex.sets) if (s.done) sec += s.durationSec ?? 0;
+  }
+  return Math.round(sec / 60);
+}
+
+/**
+ * One-line session summary: strength parts as sets and kg, activity parts as minutes, plus the
+ * estimated burn when given, e.g. "4 sets · 1,920 kg · 30 min active · ~390 kcal".
+ */
+export function sessionSummary(workout: Workout, lookup: ExerciseLookup, burnKcal?: number): string {
+  const parts: string[] = [];
+  const sets = hardSetCount(workout);
+  if (sets) {
+    parts.push(`${sets} ${sets === 1 ? 'set' : 'sets'}`);
+    const kg = volumeLoad(workout);
+    if (kg) parts.push(`${Math.round(kg).toLocaleString()} kg`);
+  }
+  const min = activeMinutes(workout, lookup);
+  if (min) parts.push(`${min} min active`);
+  if (burnKcal) parts.push(`~${burnKcal} kcal`);
+  return parts.join(' · ');
 }

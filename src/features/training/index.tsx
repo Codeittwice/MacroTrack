@@ -6,12 +6,13 @@ import { MuscleMap, fmtSets } from '@/components/MuscleMap';
 import type { Muscle } from '@/db/types';
 import { deleteTemplate, startWorkout, useActiveWorkout, useExerciseLookup, useTemplates, useWorkouts } from '@/lib/training/actions';
 import { MUSCLE_LABEL } from '@/lib/training/exercises';
-import { hardSetCount, volumeLoad, weeklySetsByMuscle, WEEKLY_SET_TARGET } from '@/lib/training/volume';
+import { sessionSummary, weeklySetsByMuscle, WEEKLY_SET_TARGET } from '@/lib/training/volume';
+import { useTrend } from '@/lib/weight/queries';
 import { addDays, today } from '@/lib/utils/date';
-import { newRecordsIn } from '@/lib/training/strength';
+import { estimatedBurnKcal, newRecordsIn } from '@/lib/training/strength';
 import { WorkoutPage } from './WorkoutPage';
 import { ExerciseDetail } from './ExerciseDetail';
-import { fmtDate, fmtDuration, fmtKg } from './format';
+import { fmtDate, fmtDuration } from './format';
 
 export default function TrainingRoutes() {
   return (
@@ -29,6 +30,8 @@ function TrainingHome() {
   const active = useActiveWorkout();
   const templates = useTemplates();
   const lookup = useExerciseLookup();
+  const bodyKg = useTrend()?.latestTrendKg ?? 0;
+  const summaryFor = (w: import('@/db/types').Workout) => sessionSummary(w, lookup, bodyKg ? estimatedBurnKcal(w, bodyKg, lookup) : undefined);
   const [muscle, setMuscle] = useState<Muscle>();
   const finished = useMemo(() => (workouts ?? []).filter((w) => w.finishedAt), [workouts]);
   const weekly = useMemo(() => weeklySetsByMuscle(finished, today(), lookup), [finished, lookup]);
@@ -87,7 +90,7 @@ function TrainingHome() {
               <Link key={w.id} to={`/training/workout/${w.id}`} className="flex items-center gap-3 py-2.5 hover:bg-surface-2">
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{w.name}</div>
-                  <div className="text-sm text-muted">{fmtDate(w.date)} · {fmtDuration(w.finishedAt! - w.startedAt)} · {hardSetCount(w)} sets · {fmtKg(volumeLoad(w))} kg</div>
+                  <div className="text-sm text-muted">{fmtDate(w.date)} · {fmtDuration(w.finishedAt! - w.startedAt)}{summaryFor(w) ? ` · ${summaryFor(w)}` : ''}</div>
                 </div>
                 <ChevronRight size={18} className="text-muted" />
               </Link>

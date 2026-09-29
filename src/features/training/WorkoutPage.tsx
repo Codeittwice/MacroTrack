@@ -11,7 +11,7 @@ import {
   updateSet, updateWorkoutMeta, useExerciseLookup, useWorkout, useWorkouts,
 } from '@/lib/training/actions';
 import { estimatedBurnKcal, newRecordsIn, previousSets } from '@/lib/training/strength';
-import { hardSetCount, setsByMuscle, volumeLoad } from '@/lib/training/volume';
+import { activeMinutes, hardSetCount, setsByMuscle, volumeLoad } from '@/lib/training/volume';
 import { ExercisePicker } from './ExercisePicker';
 import { fmtClock, fmtDate, fmtDuration, fmtKg } from './format';
 
@@ -151,8 +151,17 @@ function WorkoutSummary({ workout }: { workout: Workout }) {
       <PageHeader title={workout.name} right={<span className="text-sm text-muted">{fmtDate(workout.date)}</span>} />
       <div className="grid grid-cols-3 gap-3">
         <Card><div className="text-xs text-muted">Duration</div><div className="text-lg font-semibold">{fmtDuration(workout.finishedAt! - workout.startedAt)}</div></Card>
-        <Card><div className="text-xs text-muted">Sets</div><div className="text-lg font-semibold">{hardSetCount(workout)}</div></Card>
-        <Card><div className="text-xs text-muted">Volume</div><div className="text-lg font-semibold">{fmtKg(volumeLoad(workout))} kg</div></Card>
+        {hardSetCount(workout) > 0 ? (
+          <>
+            <Card><div className="text-xs text-muted">Sets</div><div className="text-lg font-semibold">{hardSetCount(workout)}</div></Card>
+            <Card><div className="text-xs text-muted">Volume</div><div className="text-lg font-semibold">{fmtKg(volumeLoad(workout))} kg</div></Card>
+          </>
+        ) : (
+          <>
+            <Card><div className="text-xs text-muted">Active</div><div className="text-lg font-semibold">{activeMinutes(workout, lookup)} min</div></Card>
+            <Card><div className="text-xs text-muted">Burned</div><div className="text-lg font-semibold">{burn ? `~${burn} kcal` : '—'}</div></Card>
+          </>
+        )}
       </div>
 
       {records.length > 0 && (

@@ -2,13 +2,15 @@ import { Link } from 'react-router-dom';
 import { Dumbbell } from 'lucide-react';
 import { Card } from '@/components/ui';
 import { useActiveWorkout, useWorkouts } from '@/lib/training/actions';
-import { hardSetCount } from '@/lib/training/volume';
+import { sessionSummary } from '@/lib/training/volume';
+import { useExerciseLookup } from '@/lib/training/actions';
 import { addDays, fromDateKey } from '@/lib/utils/date';
 
 /** This week's training at a glance; links to the Training tab. */
 export function TrainingTile({ today }: { today: string }) {
   const workouts = useWorkouts();
   const active = useActiveWorkout();
+  const lookup = useExerciseLookup();
   if (workouts === undefined) return null;
   const finished = workouts.filter((w) => w.finishedAt);
   const week = finished.filter((w) => w.date > addDays(today, -7));
@@ -21,7 +23,7 @@ export function TrainingTile({ today }: { today: string }) {
           <div className="text-xs text-muted">Training</div>
           <div className="font-semibold">{active ? `${active.name} in progress` : `${week.length} ${week.length === 1 ? 'workout' : 'workouts'} this week`}</div>
           <div className="truncate text-xs text-muted">
-            {last ? `Last: ${last.name}, ${fromDateKey(last.date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}, ${hardSetCount(last)} sets` : 'Start your first workout'}
+            {last ? `Last: ${last.name}, ${fromDateKey(last.date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}, ${sessionSummary(last, lookup)}` : 'Start your first workout'}
           </div>
         </div>
       </Card>

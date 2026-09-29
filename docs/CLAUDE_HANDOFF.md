@@ -18,11 +18,13 @@ All plan waves are implemented. The app works as a browser PWA, as an Android AP
 | Reminders: weigh-in, food log, water and weekly check-in. Android: local notifications (verified). Web/desktop: dashboard prompts | done |
 | Body fat estimator (US Navy tape, waist-only RFM, visual guide) wired to onboarding/profile/weigh-in; neck measurement; Progress body composition (BF %, lean/fat mass) | done (2026-09-28) |
 | Training tab (replaces Weight tab; Weight log under More): ~100 built-in exercises + custom, live workout with rest timer and last-time hints, templates, PRs/e1RM, front/back muscle map of weekly hard sets (10–20 guideline); net burn estimate (MET − 1), cardio logged in minutes; Settings → Exercise calories Off/Half/Full adds it to that day's target as carbs (default Off) | done (2026-09-29) |
+| Sports and activities (30, e.g. volleyball, basketball, korfball, hockey, padel), logged in minutes; sessions show active minutes and ~kcal instead of sets/volume; not counted as hard sets on the muscle map | done (2026-09-29) |
+| Android keyboard: adjustResize + `interactive-widget=resizes-content` + focus scroll-into-view (`src/app/keyboard.ts`); still to verify on a device | done, unverified on device |
 | Supplements: daily checklist (dashboard + page), adherence/streak, Android reminders (ids 200+), protein powder etc. add food-log entries | done (2026-09-28) |
 | Android: icons, splash, edge-to-edge insets, dark system bars | done, emulator-verified |
 | Windows: exe + NSIS installer; data survives a restart | done, verified |
 
-Verification at the last commit: `npm run build` ✓, `npm test` 315 ✓, `npm run e2e` 23 ✓ (desktop and Pixel 7), `npm run desktop:build` ✓, Android debug APK installed and exercised on the Pixel 7 API 35 emulator.
+Verification at the last commit: `npm run build` ✓, `npm test` 316 ✓, `npm run e2e` 24 ✓ (desktop and Pixel 7), `npm run desktop:build` ✓, Android debug APK installed and exercised on the Pixel 7 API 35 emulator.
 
 ## Fixes in the 2026-09-25 Claude pass (what the audit of Codex's work found)
 

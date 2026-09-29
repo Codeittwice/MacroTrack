@@ -119,3 +119,18 @@ describe('concurrent edits', () => {
     expect(saved!.exercises[0].sets.every((s) => s.kg === 80 && s.reps === 8 && s.done)).toBe(true);
   });
 });
+
+describe('activity sessions', () => {
+  it('summarises sports by minutes and burn instead of sets', async () => {
+    const { activeMinutes, sessionSummary } = await import('./volume');
+    const w: Workout = {
+      id: 'v', updatedAt: 0, date: '2026-09-29', startedAt: 0, finishedAt: 5_400_000, name: 'Volleyball',
+      exercises: [{ exerciseId: 'volleyball', name: 'Volleyball', sets: [{ durationSec: 5400, type: 'working', done: true }] }],
+    };
+    expect(hardSetCount(w)).toBe(0);
+    expect(activeMinutes(w, lookup)).toBe(90);
+    expect(sessionSummary(w, lookup, 560)).toBe('90 min active · ~560 kcal');
+    const mixed: Workout = { ...w, exercises: [...workout('2026-09-29', 1, [{ kg: 80, reps: 8 }]).exercises, ...w.exercises] };
+    expect(sessionSummary(mixed, lookup)).toBe('1 set · 640 kg · 90 min active');
+  });
+});
