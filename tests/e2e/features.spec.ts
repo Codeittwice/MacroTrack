@@ -219,3 +219,20 @@ test('tracks supplements and counts protein powder in the food log', async ({ pa
   await page.goto('/log');
   await expect(page.getByText('Whey (30 g)')).toBeHidden();
 });
+
+test('adds workout calories to the day target when the setting is on', async ({ page }) => {
+  await seed(page, 3);
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'Full', exact: true }).click();
+  await page.goto('/training');
+  await page.getByRole('button', { name: 'Start empty workout' }).click();
+  await page.getByRole('button', { name: 'Add exercise' }).click();
+  await page.getByRole('dialog').getByLabel('Search exercises').fill('running');
+  await page.getByRole('dialog').getByRole('button', { name: /^Running/ }).first().click();
+  await page.getByLabel('Running set 1 minutes').fill('30');
+  await page.getByRole('button', { name: 'Complete Running set 1' }).click();
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await expect(page.getByText(/All of it is added to today's calorie target/)).toBeVisible();
+  await page.goto('/');
+  await expect(page.getByText(/Includes \+\d+ kcal from today's training/)).toBeVisible();
+});

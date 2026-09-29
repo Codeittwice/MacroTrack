@@ -4,6 +4,7 @@ import { db } from '@/db/schema';
 import { DEFAULT_SETTINGS, alive } from '@/db/repo';
 import type { DateKey, MacroTargets, Profile, Settings, TargetSet } from '@/db/types';
 import { fromDateKey } from '@/lib/utils/date';
+import { exerciseBonusKcal } from '@/lib/training/burn';
 
 export function useSettings(): Settings {
   const stored = useLiveQuery(() => db.settings.get('settings'), []);
@@ -29,6 +30,13 @@ export function resolveTargets(set: TargetSet | undefined, date: DateKey): Macro
   return set.perWeekday?.[wd] ?? set.base;
 }
 
+/** Targets for a date, including workout calories when the exercise-calories setting is on (as carbs). */
 export function useTargets(date: DateKey): MacroTargets | undefined {
-  return useLiveQuery(async () => resolveTargets(await getTargetSetFor(date), date), [date]);
+  return useLiveQuery(async () => {
+    const base = resolveTargets(await getTargetSetFor(date), date);
+    if (!base) return undefined;
+    const settings = (await db.settings.get('settings')) ?? DEFAULT_SETTINGS;
+    const bonus = await exerciseBonusKcal(date, settings.exerciseCalories ?? 'off');
+    return bonus > 0 ? { ...base, kcal: base.kcal + bonus, carbs: base.carbs + Math.round(bonus / 4), exerciseKcal: bonus } : base;
+  }, [date]);
 }

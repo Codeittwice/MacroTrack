@@ -100,6 +100,11 @@ export interface Settings {
   /** Evening food-logging notification (Android app). */
   logReminderEnabled: boolean;
   logReminderTime: string;
+  /**
+   * Add workout calories to that day's target: 'off' (default; the adaptive expenditure already
+   * reflects training), 'half' or 'full' of the estimated net burn.
+   */
+  exerciseCalories: 'off' | 'half' | 'full';
   /** Notification on the profile's weekly check-in day. */
   checkInReminderEnabled: boolean;
   checkInReminderTime: string;
@@ -166,6 +171,8 @@ export interface MacroTargets {
   protein: number;
   carbs: number;
   fat: number;
+  /** kcal added for that day's workouts (exercise-calories setting); already included in kcal */
+  exerciseKcal?: number;
 }
 
 export interface TargetSet extends Syncable {

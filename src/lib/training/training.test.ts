@@ -73,9 +73,13 @@ describe('strength', () => {
     expect(previousSets([a, b, c], 'bench-press', 3)?.[0].kg).toBe(85);
   });
 
-  it('gives an informational burn estimate from MET and duration', () => {
+  it('estimates net burn: strength from session time, cardio from logged minutes', () => {
     const w = workout('2026-09-28', 0, [{ kg: 80, reps: 8 }]);
-    expect(estimatedBurnKcal(w, 80, lookup)).toBe(Math.round(bench.met! * 80 * 1));
+    expect(estimatedBurnKcal(w, 80, lookup)).toBe(Math.round((bench.met! - 1) * 80 * 1)); // 1 h strength
+    const run: Workout = { ...w, exercises: [...w.exercises, { exerciseId: 'running', name: 'Running', sets: [{ durationSec: 1800, type: 'working', done: true }] }] };
+    const running = builtInExercise('running')!;
+    // 30 min running + remaining 30 min of strength
+    expect(estimatedBurnKcal(run, 80, lookup)).toBe(Math.round((running.met! - 1) * 80 * 0.5 + (bench.met! - 1) * 80 * 0.5));
   });
 });
 

@@ -65,14 +65,29 @@ export function e1rmHistory(workouts: Workout[], exerciseId: string): { date: Da
 }
 
 /**
- * Informational energy estimate: MET × body weight × hours, using each exercise's share of the
- * session by set count. Never used for targets (the adaptive expenditure already includes training).
+ * Net energy cost of a session: (MET − 1) × body weight × hours, so the resting burn that is
+ * already part of daily expenditure isn't counted twice. Cardio uses its logged minutes; strength
+ * work gets the rest of the session time, weighted by completed sets per exercise.
  */
 export function estimatedBurnKcal(workout: Workout, bodyKg: number, lookup: ExerciseLookup): number {
   if (!workout.finishedAt || !(bodyKg > 0)) return 0;
-  const hours = Math.max(0, workout.finishedAt - workout.startedAt) / 3_600_000;
-  const weighted = workout.exercises.map((ex) => ({ met: lookup(ex.exerciseId)?.met ?? 5, n: Math.max(1, ex.sets.filter((s) => s.done).length) }));
-  const total = weighted.reduce((a, b) => a + b.n, 0);
-  const met = total ? weighted.reduce((a, b) => a + b.met * b.n, 0) / total : 5;
-  return Math.round(met * bodyKg * hours);
+  const sessionH = Math.max(0, workout.finishedAt - workout.startedAt) / 3_600_000;
+  let cardioH = 0;
+  let cardioKcal = 0;
+  const strength: { met: number; n: number }[] = [];
+  for (const ex of workout.exercises) {
+    const def = lookup(ex.exerciseId);
+    const done = ex.sets.filter((s) => s.done);
+    if (def?.kind === 'cardio') {
+      const h = done.reduce((sum, s) => sum + (s.durationSec ?? 0), 0) / 3600;
+      cardioH += h;
+      cardioKcal += Math.max(0, (def.met ?? 6) - 1) * bodyKg * h;
+    } else if (done.length) {
+      strength.push({ met: def?.met ?? 5, n: done.length });
+    }
+  }
+  const sets = strength.reduce((a, b) => a + b.n, 0);
+  const strengthMet = sets ? strength.reduce((a, b) => a + b.met * b.n, 0) / sets : 0;
+  const strengthKcal = sets ? Math.max(0, strengthMet - 1) * bodyKg * Math.max(0, sessionH - cardioH) : 0;
+  return Math.round(cardioKcal + strengthKcal);
 }

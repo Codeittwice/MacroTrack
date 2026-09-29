@@ -5,6 +5,7 @@ import { Button, Card, Input, NumberInput, PageHeader, cx } from '@/components/u
 import { MuscleMap } from '@/components/MuscleMap';
 import type { Muscle, Workout } from '@/db/types';
 import { useTrend } from '@/lib/weight/queries';
+import { useSettings } from '@/app/hooks';
 import {
   addExercise, addSet, deleteWorkout, finishWorkout, moveExercise, removeExercise, removeSet, repeatWorkout, saveTemplate,
   updateSet, updateWorkoutMeta, useExerciseLookup, useWorkout, useWorkouts,
@@ -26,6 +27,7 @@ export function WorkoutPage() {
 
 function ActiveWorkout({ workout }: { workout: Workout }) {
   const nav = useNavigate();
+  const lookup = useExerciseLookup();
   const history = useWorkouts();
   const [picker, setPicker] = useState(false);
   const [restFor, setRestFor] = useState(() => Number(localStorageGet('mt-rest') ?? 90));
@@ -56,6 +58,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
 
       {workout.exercises.map((ex, exIndex) => {
         const prev = history ? previousSets(history, ex.exerciseId, workout.startedAt) : undefined;
+        const isCardio = lookup(ex.exerciseId)?.kind === 'cardio';
         return (
           <Card key={`${ex.exerciseId}-${exIndex}`}>
             <div className="mb-2 flex items-center gap-1">
@@ -65,7 +68,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
               <IconBtn label={`Remove ${ex.name}`} onClick={() => void removeExercise(workout.id, exIndex)}><Trash2 size={16} /></IconBtn>
             </div>
             <div className="grid grid-cols-[2.2rem_1fr_1fr_1fr_2.5rem_1.8rem] items-center gap-2 text-xs text-muted">
-              <span>Set</span><span>Last time</span><span>kg</span><span>Reps</span><span className="text-center">Done</span><span />
+              <span>Set</span><span>Last time</span>{isCardio ? <span className="col-span-2">Duration</span> : <><span>kg</span><span>Reps</span></>}<span className="text-center">Done</span><span />
             </div>
             {ex.sets.map((s, si) => {
               const hint = prev?.[si];
@@ -75,9 +78,15 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
                   <button type="button" aria-label={`${label}: ${s.type === 'warmup' ? 'warm-up, tap for working set' : 'working set, tap for warm-up'}`} onClick={() => void updateSet(workout.id, exIndex, si, { type: s.type === 'warmup' ? 'working' : 'warmup' })} className={cx('h-9 rounded-lg text-sm font-medium', s.type === 'warmup' ? 'text-warning' : 'text-text')}>
                     {s.type === 'warmup' ? 'W' : si + 1 - ex.sets.slice(0, si).filter((x) => x.type === 'warmup').length}
                   </button>
-                  <span className="truncate text-xs text-muted">{hint ? `${hint.kg ?? 0} × ${hint.reps ?? 0}` : '—'}</span>
-                  <NumberInput aria-label={`${label} weight`} value={s.kg} onValue={(kg) => void updateSet(workout.id, exIndex, si, { kg })} placeholder={hint?.kg !== undefined ? String(hint.kg) : 'kg'} className="[&_input]:h-9 [&_input]:px-2" />
-                  <NumberInput aria-label={`${label} reps`} value={s.reps} onValue={(reps) => void updateSet(workout.id, exIndex, si, { reps: reps === undefined ? undefined : Math.round(reps) })} placeholder={hint?.reps !== undefined ? String(hint.reps) : 'reps'} className="[&_input]:h-9 [&_input]:px-2" />
+                  <span className="truncate text-xs text-muted">{hint ? (isCardio ? `${Math.round((hint.durationSec ?? 0) / 60)} min` : `${hint.kg ?? 0} × ${hint.reps ?? 0}`) : '—'}</span>
+                  {isCardio ? (
+                    <NumberInput aria-label={`${label} minutes`} value={s.durationSec === undefined ? undefined : Math.round(s.durationSec / 60)} onValue={(min) => void updateSet(workout.id, exIndex, si, { durationSec: min === undefined ? undefined : Math.round(min * 60) })} placeholder={hint?.durationSec ? String(Math.round(hint.durationSec / 60)) : 'min'} suffix="min" className="col-span-2 [&_input]:h-9 [&_input]:px-2" />
+                  ) : (
+                    <>
+                      <NumberInput aria-label={`${label} weight`} value={s.kg} onValue={(kg) => void updateSet(workout.id, exIndex, si, { kg })} placeholder={hint?.kg !== undefined ? String(hint.kg) : 'kg'} className="[&_input]:h-9 [&_input]:px-2" />
+                      <NumberInput aria-label={`${label} reps`} value={s.reps} onValue={(reps) => void updateSet(workout.id, exIndex, si, { reps: reps === undefined ? undefined : Math.round(reps) })} placeholder={hint?.reps !== undefined ? String(hint.reps) : 'reps'} className="[&_input]:h-9 [&_input]:px-2" />
+                    </>
+                  )}
                   <button
                     type="button"
                     aria-label={`${s.done ? 'Undo' : 'Complete'} ${label}`}
@@ -126,6 +135,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
 
 function WorkoutSummary({ workout }: { workout: Workout }) {
   const nav = useNavigate();
+  const settings = useSettings();
   const history = useWorkouts();
   const lookup = useExerciseLookup();
   const trend = useTrend();
@@ -161,13 +171,17 @@ function WorkoutSummary({ workout }: { workout: Workout }) {
         {workout.exercises.map((ex) => (
           <div key={ex.exerciseId} className="border-b border-border py-2 last:border-0">
             <button type="button" className="font-medium hover:underline" onClick={() => nav(`/training/exercise/${ex.exerciseId}`)}>{ex.name}</button>
-            <div className="text-sm text-muted">{ex.sets.map((s) => `${s.type === 'warmup' ? 'W ' : ''}${s.kg ?? 0} × ${s.reps ?? 0}`).join(' · ')}</div>
+            <div className="text-sm text-muted">{ex.sets.map((s) => (s.durationSec ? `${Math.round(s.durationSec / 60)} min` : `${s.type === 'warmup' ? 'W ' : ''}${s.kg ?? 0} × ${s.reps ?? 0}`)).join(' · ')}</div>
           </div>
         ))}
       </Card>
 
       {burn > 0 && (
-        <p className="flex items-start gap-2 text-sm text-muted"><Flame size={16} className="mt-0.5 shrink-0" /> About {burn} kcal burned. For information only: your calorie targets already adapt to your real expenditure, so this isn't added to today's budget.</p>
+        <p className="flex items-start gap-2 text-sm text-muted"><Flame size={16} className="mt-0.5 shrink-0" />
+          {settings.exerciseCalories === 'off'
+            ? `About ${burn} kcal burned (net). Not added to today's budget because your targets already adapt to your real expenditure; change this under Settings → Exercise calories.`
+            : `About ${burn} kcal burned (net). ${settings.exerciseCalories === 'half' ? 'Half of it' : 'All of it'} is added to today's calorie target as carbs.`}
+        </p>
       )}
 
       <Card>

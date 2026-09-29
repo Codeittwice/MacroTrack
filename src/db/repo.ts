@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS: Settings = {
   weighInReminderTime: '07:30',
   logReminderEnabled: false,
   logReminderTime: '21:00',
+  exerciseCalories: 'off',
   checkInReminderEnabled: false,
   checkInReminderTime: '09:00',
   syncEnabled: false,

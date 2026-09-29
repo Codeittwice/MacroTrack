@@ -63,6 +63,7 @@ export default function DashboardPage() {
 
       <div className="flex flex-col gap-4">
         <HeroCard totals={data.dayTotals} targets={data.targets} />
+        {data.targets?.exerciseKcal ? <p className="-mt-2 px-1 text-xs text-muted">Includes +{data.targets.exerciseKcal} kcal from today's training.</p> : null}
         <QuickActions meal={meal} />
         <TodayMeals mealNames={settings.mealNames} entries={data.dayEntries} />
       </div>
