@@ -247,7 +247,8 @@ test('adds workout calories to the day target when the setting is on', async ({ 
 test('translates a Bulgarian meal description to English before estimating', async ({ page }) => {
   await seed(page, 2);
   await page.evaluate(async () => {
-    const { updateSettings } = await import(/* @vite-ignore */ '/src/db/repo.ts');
+    const load = (p: string) => import(/* @vite-ignore */ p);
+    const { updateSettings } = await load('/src/db/repo.ts');
     await updateSettings({ aiProvider: 'claude', apiKeys: { claude: 'test-key' } });
   });
   await page.route('https://api.anthropic.com/**', (route) => route.fulfill({
