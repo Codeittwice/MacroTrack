@@ -31,13 +31,17 @@ The default theme is Fresh Dark: background `#0F1115`, surface `#171A21`, elevat
 7. Progress provides weight, expenditure, intake, adherence, macro and measurement history.
 8. Adaptive Coach recalculates expenditure and proposes weekly targets for user approval.
 9. Settings covers units, theme, API keys, backup/import/export and future sync.
+10. Training (a bottom tab that replaced Weight; Weight log moved to More) logs gym workouts and sports: an exercise library, live workouts with a rest timer and last-time hints, templates, personal records and e1RM, and an anatomical front/back muscle map of weekly hard sets.
+11. Supplements provide a daily dose checklist with adherence, reminders, and food-log entries for supplements with calories.
+12. The body fat estimator (US Navy tape, waist-only RFM, visual guide) sits next to every body fat field. Progress shows body composition (body fat %, lean and fat mass).
 
 ## Food Sources
 
-1. NEVO 2023 is bundled from a RIVM CSV/XLSX conversion into `public/data/nevo.json`, with Dutch and English names, macro nutrients and key micronutrients. It must work offline and retain the required attribution.
+1. NEVO-online 2025/9.0 (2328 foods) is bundled, unchanged (no rounding), from the RIVM CSV into `public/data/nevo.json`, with Dutch and English names, macro nutrients and key micronutrients. It must work offline and retain the required attribution.
 2. Open Food Facts supplies branded Dutch products and barcode lookups. Results are cached in Dexie.
-3. An Albert Heijn adapter is optional and experimental because no official public API exists.
-4. User foods, recipes, and AI estimates fill remaining gaps. AI estimates can be saved as custom foods.
+3. Planned: Open Food Facts Bulgaria as a second product region (see Wave 8).
+4. An Albert Heijn adapter is optional and experimental because no official public API exists.
+5. User foods, recipes, and AI estimates fill remaining gaps. AI estimates can be saved as custom foods.
 
 All sources use `FoodItem { id, source, name, brand?, per100, servings, barcode? }` so food-log history can snapshot nutrients and remain stable after source data changes.
 
@@ -56,11 +60,15 @@ Algorithms belong in `src/lib/nutrition/` as pure, fixture-tested functions.
 
 AI is used chiefly to identify ingredients and estimate portions, not as the final nutrient authority. Provider adapters return an itemised schema with name, estimated grams, macros, confidence, and optional NEVO query. A grounding step searches NEVO and Open Food Facts and replaces an estimate's per-100 values when a strong match exists. Users review and edit the breakdown before logging it.
 
+Inputs are a text description, a meal photo (downscaled on the device to 1024 px), or a nutrition-label photo (1600 px), which fills in a custom food. All three share one transport, `askProvider()` in `src/lib/ai/client.ts`. Planned: voice input, with Bulgarian speech translated to English before estimating (Wave 8).
+
+Workout calories are, by default, NOT added to targets, because adaptive expenditure already includes training. Settings > Exercise calories can add half or all of a workout's estimated net burn ((MET - 1) x kg x hours) to that day's target as carbs.
+
 The evaluation script benchmarks about thirty weighed Dutch meals and products, measuring calorie and protein error before and after grounding. API keys remain local and are only sent to the chosen provider. They must never be logged or exported.
 
 ## Data Model
 
-Dexie tables are: `profile`, `settings`, `weights`, `measurements`, `foods`, `recipes`, `savedMeals`, `logEntries`, `targets`, `checkins`, `water`, `notes`, and `photos`. Weight is stored in kilograms, energy in kcal, nutrient amounts in grams (sodium in mg), and dates as local `YYYY-MM-DD` keys. Log entries retain a nutrient snapshot and an optional per-100 snapshot so historical entries never change when a food is edited.
+Dexie tables (v1) are: `profile`, `settings`, `weights`, `measurements`, `foods`, `recipes`, `savedMeals`, `logEntries`, `targets`, `checkins`, `water`, `notes`, and `photos`. Schema v2 adds `exercises` (custom only; built-ins live in code), `workouts`, `workoutTemplates`, `supplements` and `supplementLogs`. Backups made before v2 still restore. Weight is stored in kilograms, energy in kcal, nutrient amounts in grams (sodium in mg), and dates as local `YYYY-MM-DD` keys. Log entries retain a nutrient snapshot and an optional per-100 snapshot so historical entries never change when a food is edited.
 
 ## Delivery Waves
 
@@ -73,6 +81,8 @@ Dexie tables are: `profile`, `settings`, `weights`, `measurements`, `foods`, `re
 | 4 | Coach, progress/statistics, measurements, photos, water, reminders, backup | Correct check-in proposal; export/import round-trips |
 | 5 | Capacitor Android and Tauri Windows packaging | APK installs and Windows app launches with offline persistence |
 | 6 | Optional Supabase sync | Offline edits from two devices converge |
+| 7 | Additions (done 2026-09-25 to 29): photo/label AI, history import, reminders, body fat, Training + sports + muscle map, exercise calories, supplements | Unit and e2e tests green; verified on the emulator |
+| 8 | Voice meal input with Bulgarian-to-English translation; Bulgarian product data (planned) | See docs/CLAUDE_HANDOFF.md "Next: voice + Bulgarian" |
 | QA | Full cross-project integration | Playwright smoke flow, manual checklist, and both platform builds pass |
 
 ## Ownership and Quality Gates
@@ -89,7 +99,9 @@ Waves run in sequence; workstreams within a wave have disjoint file ownership. T
 - Wave 5 Android packaging is verified: the debug APK installs and launches on a Pixel 7 API 35 emulator, and onboarding measurement fields have touch-native controls for AVDs without a working software keyboard.
 - Wave 5 Windows packaging now has a Tauri host and reproducible NSIS installer build. The remaining exit-gate check is a native desktop launch with persisted offline data.
 - The QA baseline is now executable in Chromium desktop and Pixel 7 emulation with `npm run e2e`; it covers onboarding and a quick food-log update end to end.
-- The licensed NEVO source CSV remains an external prerequisite.
+- NEVO 2025 is bundled (2026-09-27).
+- Wave 7 additions are done (see docs/CLAUDE_HANDOFF.md). At the last check: 316 unit and 24 e2e tests passing.
+- Wave 8 (voice + Bulgarian) is planned and not started.
 
 ## Verification Checklist
 

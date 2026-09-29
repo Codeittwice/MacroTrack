@@ -2,7 +2,7 @@
 
 Branch: `feature/app-build` on github.com/Codeittwice/MacroTrack. Read this file, then `git log`, before starting.
 
-## Status (2026-09-25, Claude)
+## Status (updated 2026-09-29, Claude)
 
 All plan waves are implemented. The app works as a browser PWA, as an Android APK (Capacitor 7) and as a Windows desktop app (Tauri 2).
 
@@ -24,7 +24,7 @@ All plan waves are implemented. The app works as a browser PWA, as an Android AP
 | Android: icons, splash, edge-to-edge insets, dark system bars | done, emulator-verified |
 | Windows: exe + NSIS installer; data survives a restart | done, verified |
 
-Verification at the last commit: `npm run build` ✓, `npm test` 316 ✓, `npm run e2e` 24 ✓ (desktop and Pixel 7), `npm run desktop:build` ✓, Android debug APK installed and exercised on the Pixel 7 API 35 emulator.
+Verification at the last commit: `npm run build` ✓, `npm test` 316 ✓, `npm run e2e` 24 ✓ twice in a row (desktop and Pixel 7), `npm run desktop:build` ✓, Android debug APK installed and exercised on the Pixel 7 API 35 emulator.
 
 ## Fixes in the 2026-09-25 Claude pass (what the audit of Codex's work found)
 
@@ -40,6 +40,32 @@ Verification at the last commit: `npm run build` ✓, `npm test` 316 ✓, `npm r
 - **Open Food Facts sodium was stored 1000× too low** (OFF reports grams, the app uses mg). Barcode lookups were cache-first and never refreshed. Printed portions ("1 broodje (90 g)") are now offered.
 - **7 stale working-tree files** that undid Codex's commits were restored at the user's request. The diff is saved in the Claude session scratchpad.
 
+## Recent fix to know about (2026-09-29)
+Settings > About used to call `loadNevo()`, which fetches the dataset AND builds the MiniSearch index. That slowed Settings enough that e2e tests navigating right after a click lost their IndexedDB writes. The credit now uses `loadNevoHeader()`. E2E tests must wait for a save to be visible (e.g. `aria-pressed="true"` on Segmented buttons, sheet hidden) before `page.goto`.
+
+## Next: voice + Bulgarian (Wave 8, not started)
+The user asked for:
+1. Describing a meal by voice.
+2. Bulgarian speech translated to English and entered into the description.
+3. A Bulgarian equivalent of NEVO.
+
+Plan:
+- **Speech-to-text by platform:**
+  - **Android:** `@capacitor-community/speech-recognition@7` (peer `@capacitor/core >=7`; adds the RECORD_AUDIO permission; language `bg-BG` / `nl-NL` / `en-US`; partial results). Android's WebView has no Web Speech API.
+  - **Browser (Chrome):** `webkitSpeechRecognition`, with `lang` set from the setting.
+  - **Windows (Tauri/WebView2):** there is no Web Speech API. Record with `MediaRecorder` and send the audio to Gemini (it accepts inline audio) or to OpenAI transcription, if the user has that key. Claude has no audio input, so hide the mic on desktop when only a Claude key is set.
+  - **Setting:** add Settings > AI > "Voice language" (Auto / English / Nederlands / Bulgarian) to `Settings` in `src/db/types.ts` and its default in `src/db/repo.ts`.
+- **Where it goes:** add a mic button to `src/features/addfood/AiEstimateTab.tsx`. Put the helper in `src/lib/native/speech.ts`, with a platform switch (`isNativeApp()`), start/stop, a transcript callback and permission handling.
+- **Translation:** if the transcript contains Cyrillic (`/[Ѐ-ӿ]/`), call `askProvider()` with a short prompt: "Translate this meal description to English. Keep quantities, units and brand names. Return only the translation." Fill the description with the English text, show "Translated from Bulgarian: <original>" underneath, and let the user edit it before Estimate. The estimate prompt already handles non-English, but the user explicitly wants the English text entered.
+- **Bulgarian food data:**
+  - The official source is the Bulgarian food composition tables of the National Center of Public Health and Analyses (NCPHA), partly available through EuroFIR. It is not known to be an open download, so its availability and licence still need checking with the user or NCPHA.
+  - Practical now: add Open Food Facts Bulgaria (`countries_tags=bulgaria`) as a second region. Use a Settings "Product region: Netherlands / Bulgaria / both" that `src/lib/food-sources/off.ts` reads, and keep the rate-limit budget shared.
+  - After translation to English, generic foods still ground against NEVO's English names.
+- **Tests:**
+  - unit: Cyrillic detection plus the translation call (mock `fetch`), and OFF region parameters
+  - e2e: speech isn't available headless, so stub the speech helper and assert the translated text appears
+  - Android: the permission prompt and recognition on the emulator (host mic)
+
 ## Known gaps / next steps
 
 1. **NEVO: done (2026-09-27).** NEVO-online 2025/9.0 (2328 foods) is bundled in `public/data/nevo.json` with values unchanged and RIVM's required credit. The raw RIVM files live in `data/raw/`, which git ignores. When RIVM publishes a new version, download it, put it in `data/raw/`, run `npx tsx scripts/build-nevo.ts data/raw/<file>.csv` and rebuild. The terms forbid charging users for NEVO data, so ask nevo@rivm.nl before publishing a paid app.
@@ -47,6 +73,10 @@ Verification at the last commit: `npm run build` ✓, `npm test` 316 ✓, `npm r
 3. Test barcode scanning with a physical camera (emulator: set the back camera to Webcam0).
 4. Optional: Supabase sync. For now, move data between phone and PC with Backup → Save/share → Restore.
 5. Optional: a signed release APK and Play Store listing. Only debug builds are signed today.
+6. Verify the Android keyboard fix on a real device, typing in bottom sheets such as Quick add and the workout sets.
+7. "boterham" ranks rolls before sliced bread in NEVO search (minor).
+8. Sports minutes aren't shown on the muscle map; it counts strength hard sets only, by design.
+9. Rebuild `release/` (APK and installer) after any change. Cloud sessions can't: the Android SDK and Rust live on the user's PC.
 
 ## Builds
 
