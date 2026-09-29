@@ -91,6 +91,27 @@ export interface Settings {
   apiKeys: Partial<Record<AiProviderId, string>>;
   mealNames: string[]; // default ['Breakfast','Lunch','Dinner','Snacks']
   waterGoalMl: number;
+  waterReminderEnabled: boolean;
+  /** Local clock time in HH:MM format. */
+  waterReminderTime: string;
+  /** Daily weigh-in notification (Android app). */
+  weighInReminderEnabled: boolean;
+  weighInReminderTime: string;
+  /** Evening food-logging notification (Android app). */
+  logReminderEnabled: boolean;
+  logReminderTime: string;
+  /**
+   * Add workout calories to that day's target: 'off' (default; the adaptive expenditure already
+   * reflects training), 'half' or 'full' of the estimated net burn.
+   */
+  exerciseCalories: 'off' | 'half' | 'full';
+  /** Open Food Facts country for branded products: Netherlands, Bulgaria, or both. */
+  productRegion: 'nl' | 'bg' | 'both';
+  /** Speech recognition language for describing meals by voice ('auto' = device language). */
+  voiceLanguage: 'auto' | 'en-US' | 'nl-NL' | 'bg-BG';
+  /** Notification on the profile's weekly check-in day. */
+  checkInReminderEnabled: boolean;
+  checkInReminderTime: string;
   syncEnabled: boolean;
   updatedAt: number;
 }
@@ -154,6 +175,8 @@ export interface MacroTargets {
   protein: number;
   carbs: number;
   fat: number;
+  /** kcal added for that day's workouts (exercise-calories setting); already included in kcal */
+  exerciseKcal?: number;
 }
 
 export interface TargetSet extends Syncable {
@@ -190,4 +213,83 @@ export interface ProgressPhoto extends Syncable {
   date: DateKey;
   blob: Blob;
   pose?: 'front' | 'side' | 'back';
+}
+
+// ---- Training (schema v2) ----
+
+export type Muscle =
+  | 'chest' | 'frontDelts' | 'sideDelts' | 'rearDelts' | 'biceps' | 'triceps' | 'forearms'
+  | 'lats' | 'upperBack' | 'traps' | 'lowerBack' | 'abs' | 'obliques'
+  | 'glutes' | 'quads' | 'hamstrings' | 'adductors' | 'calves';
+
+export type Equipment = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight' | 'kettlebell' | 'band' | 'cardio' | 'sport' | 'other';
+
+export interface ExerciseDef {
+  id: string;
+  name: string;
+  nameNl?: string;
+  equipment: Equipment;
+  primary: Muscle[];
+  secondary: Muscle[];
+  kind: 'strength' | 'bodyweight' | 'cardio';
+  /** metabolic equivalent, used only for an informational burn estimate */
+  met?: number;
+}
+
+/** User-created exercise (built-ins live in code). */
+export type CustomExercise = Syncable & Omit<ExerciseDef, 'id'>;
+
+export interface WorkoutSet {
+  reps?: number;
+  kg?: number;
+  durationSec?: number;
+  rpe?: number;
+  type: 'warmup' | 'working';
+  done: boolean;
+}
+
+export interface WorkoutExercise {
+  exerciseId: string;
+  /** snapshot so renaming an exercise never rewrites history */
+  name: string;
+  sets: WorkoutSet[];
+  note?: string;
+}
+
+export interface Workout extends Syncable {
+  date: DateKey;
+  startedAt: number;
+  finishedAt?: number;
+  name: string;
+  templateId?: string;
+  note?: string;
+  exercises: WorkoutExercise[];
+}
+
+export interface WorkoutTemplate extends Syncable {
+  name: string;
+  exercises: { exerciseId: string; name: string; sets: number; repMin?: number; repMax?: number; restSec?: number }[];
+}
+
+// ---- Supplements (schema v2) ----
+
+export interface Supplement extends Syncable {
+  name: string;
+  dose: number;
+  unit: string;
+  timesPerDay: number;
+  active: boolean;
+  /** HH:MM local; schedules a daily notification in the Android app */
+  reminderTime?: string;
+  /** per dose; when set, taking a dose also adds it to the food log */
+  nutrients?: Nutrients;
+}
+
+export interface SupplementLog extends Syncable {
+  date: DateKey;
+  supplementId: string;
+  /** 0-based dose of the day */
+  doseIndex: number;
+  takenAt: number;
+  logEntryId?: string;
 }

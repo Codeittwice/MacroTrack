@@ -12,3 +12,7 @@ android/.gradle
 android/local.properties
 src-tauri/target
 .army-state.md
+
+*.tsbuildinfo
+release/
+data/raw/

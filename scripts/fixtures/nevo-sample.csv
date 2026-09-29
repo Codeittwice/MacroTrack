@@ -1,0 +1,10 @@
+NEVO-code|Voedingsmiddelgroep/Food group|Voedingsmiddelnaam/Dutch food name|Engelse naam/Food name|Synoniem|Hoeveelheid/Quantity|ENERCJ|ENERCC|PROT|CHO|FAT|FIBT|SUGAR|FASAT|NA|ALC
+101|Brood|Brood, Turks|Turkish bread|Turks brood|per 100g|1050|250,5|8,5|48,2|2,1|3,0|3,5|0,4|480|0
+102|Vlees|Kipfilet, rauw|Chicken breast, raw||per 100g|460|110|23,5|0|1,2|0|0|0,3|65|0
+103|Vetten|Pindakaas|Peanut butter||per 100g|2500|598|25|14,5|50,3|6,0|6,5|9,8|350|0
+104|Zuivel|Yoghurt, volle|Yoghurt, full fat||per 100ml|260|62|3,5|4,3|3,5|0|4,3|2,3|45|0
+105|Zuivel|Melk, halfvolle|Milk, semi-skimmed||per 100ml|197|47|3,4|4,7|1,5|0|4,7|1,0|44|0
+106|Zuivel|Kwark, magere|Quark, low fat||per 100g|220|52|10,5|4,0|0,2|0|4,0|0,1|40|0
+107|Diversen|Testproduct leeg|Test product empty||per 100g||||||||||
+108|Diversen|Testproduct kJ|Test product kJ only||per 100g|1000||5|10|2|1|1|0,5|100|0
+109|Zuivel|Crème fraîche|Creme fraiche||per 100g|1200|287|2,2|3,3|30,0|0|3,3|19,0|30|0

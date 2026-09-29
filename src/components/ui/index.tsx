@@ -3,8 +3,8 @@
  * their own file under components/ui and re-export here via the integrator.
  */
 import clsx from 'clsx';
-import { X } from 'lucide-react';
-import { useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { Minus, Plus, X } from 'lucide-react';
+import { useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
 
 export { clsx as cx };
 
@@ -56,14 +56,23 @@ export function NumberInput({
 }: Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'> & {
   value: number | undefined; onValue: (v: number | undefined) => void; suffix?: string;
 }) {
+  // Keep the raw text so partial input like "80." or "0," survives while typing.
+  const [text, setText] = useState(value === undefined ? '' : String(value));
+  useEffect(() => {
+    const parsed = Number(text.replace(',', '.'));
+    if (value === undefined ? text !== '' : parsed !== value) setText(value === undefined ? '' : String(value));
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps -- only resync on external value changes
   return (
     <div className={clsx('relative', className)}>
       <Input
         inputMode="decimal"
-        value={value ?? ''}
+        value={text}
         onChange={(e) => {
-          const s = e.target.value.replace(',', '.');
-          if (s === '') return onValue(undefined);
+          const raw = e.target.value;
+          if (!/^-?\d*[.,]?\d*$/.test(raw)) return;
+          setText(raw);
+          const s = raw.replace(',', '.');
+          if (s === '' || s === '-' || s === '.') return onValue(undefined);
           const n = Number(s);
           if (!Number.isNaN(n)) onValue(n);
         }}
@@ -71,6 +80,67 @@ export function NumberInput({
         {...rest}
       />
       {suffix && <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted">{suffix}</span>}
+    </div>
+  );
+}
+
+/** Touch-first numeric control for flows where a device keyboard is unavailable. */
+export function RangePicker({
+  value, onValue, min, max, step = 1, suggestedValue, suffix, label,
+}: {
+  value: number | undefined;
+  onValue: (value: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+  suggestedValue: number;
+  suffix: string;
+  label: string;
+}) {
+  const current = value ?? suggestedValue;
+  const decimals = Math.max(0, String(step).split('.')[1]?.length ?? 0);
+  const format = (number: number) => number.toFixed(decimals);
+  const update = (number: number) => onValue(Number(Math.min(max, Math.max(min, number)).toFixed(decimals)));
+
+  return (
+    <div className="rounded-xl border border-border bg-surface-2 px-3 py-2">
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          aria-label={`Decrease ${label}`}
+          onClick={() => update(current - step)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:border-muted hover:text-text"
+        >
+          <Minus size={18} />
+        </button>
+        <output aria-live="polite" className="min-w-0 flex-1 text-center text-lg font-semibold">
+          {format(current)} {suffix}
+        </output>
+        <button
+          type="button"
+          aria-label={`Increase ${label}`}
+          onClick={() => update(current + step)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted transition hover:border-muted hover:text-text"
+        >
+          <Plus size={18} />
+        </button>
+      </div>
+      <input
+        type="range"
+        aria-label={label}
+        min={min}
+        max={max}
+        step={step}
+        value={current}
+        onFocus={() => {
+          if (value === undefined) onValue(current);
+        }}
+        onPointerDown={() => {
+          if (value === undefined) onValue(current);
+        }}
+        onChange={(event) => update(Number(event.target.value))}
+        className="mt-2 h-2 w-full cursor-pointer accent-primary"
+      />
     </div>
   );
 }
@@ -92,9 +162,10 @@ export function Segmented<T extends string | number>({
       {options.map((o) => (
         <button
           key={String(o.value)}
+          aria-pressed={o.value === value}
           onClick={() => onChange(o.value)}
           className={clsx(
-            'flex-1 rounded-lg px-2 py-1.5 text-sm transition',
+            'flex-1 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm transition',
             o.value === value ? 'bg-surface text-text shadow-sm' : 'text-muted hover:text-text',
           )}
         >
@@ -178,17 +249,19 @@ export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; ti
   );
 }
 
-export const SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
-  nevo: { label: 'NEVO', cls: 'bg-indigo-500/15 text-indigo-400' },
-  off: { label: 'OFF', cls: 'bg-green-500/15 text-green-400' },
-  ah: { label: 'AH', cls: 'bg-sky-500/15 text-sky-400' },
-  user: { label: 'Mine', cls: 'bg-surface-2 text-muted' },
-  recipe: { label: 'Recipe', cls: 'bg-amber-500/15 text-amber-400' },
-  ai: { label: 'AI estimate', cls: 'bg-violet-500/15 text-violet-400' },
-  quick: { label: 'Quick', cls: 'bg-surface-2 text-muted' },
+/** Source badges tint with theme tokens so they stay legible in both light and dark mode. */
+const tint = (token: string) => ({ background: `color-mix(in srgb, var(${token}) 16%, transparent)`, color: `var(${token})` });
+export const SOURCE_BADGE: Record<string, { label: string; style?: { background: string; color: string } }> = {
+  nevo: { label: 'NEVO', style: tint('--carbs') },
+  off: { label: 'OFF', style: tint('--primary') },
+  ah: { label: 'AH', style: tint('--carbs') },
+  user: { label: 'Mine' },
+  recipe: { label: 'Recipe', style: tint('--fat') },
+  ai: { label: 'AI estimate', style: tint('--kcal') },
+  quick: { label: 'Quick' },
 };
 
 export function SourceBadge({ source }: { source: string }) {
   const b = SOURCE_BADGE[source] ?? SOURCE_BADGE.user;
-  return <span className={clsx('rounded px-1.5 py-0.5 text-[10px] font-medium', b.cls)}>{b.label}</span>;
+  return <span className={clsx('rounded px-1.5 py-0.5 text-[10px] font-medium', !b.style && 'bg-surface-2 text-muted')} style={b.style}>{b.label}</span>;
 }

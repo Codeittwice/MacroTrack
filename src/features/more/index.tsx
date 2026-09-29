@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom';
-import { BookOpen, ChevronRight, Droplets, Gauge, Image, Ruler, Save, Settings } from 'lucide-react';
+import { BookOpen, Pill, Scale, ChevronRight, Droplets, Gauge, Image, Ruler, Save, Settings } from 'lucide-react';
 import { PageHeader } from '@/components/ui';
 
 const ITEMS = [
+  { to: '/weight', label: 'Weight log', icon: Scale },
   { to: '/coach', label: 'Coach and targets', icon: Gauge },
   { to: '/recipes', label: 'Recipes, meals and my foods', icon: BookOpen },
   { to: '/extras/measurements', label: 'Body measurements', icon: Ruler },
   { to: '/extras/photos', label: 'Progress photos', icon: Image },
+  { to: '/supplements', label: 'Supplements', icon: Pill },
   { to: '/extras/water', label: 'Water', icon: Droplets },
   { to: '/extras/backup', label: 'Export, import and backup', icon: Save },
   { to: '/settings', label: 'Settings', icon: Settings },
@@ -14,7 +16,7 @@ const ITEMS = [
 
 export default function MorePage() {
   return (
-    <>
+    <div className="mx-auto max-w-2xl">
       <PageHeader title="More" />
       <div className="overflow-hidden rounded-2xl bg-surface">
         {ITEMS.map(({ to, label, icon: Icon }) => (
@@ -25,6 +27,6 @@ export default function MorePage() {
           </Link>
         ))}
       </div>
-    </>
+    </div>
   );
 }
