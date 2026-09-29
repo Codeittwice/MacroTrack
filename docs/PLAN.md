@@ -82,7 +82,7 @@ Dexie tables (v1) are: `profile`, `settings`, `weights`, `measurements`, `foods`
 | 5 | Capacitor Android and Tauri Windows packaging | APK installs and Windows app launches with offline persistence |
 | 6 | Optional Supabase sync | Offline edits from two devices converge |
 | 7 | Additions (done 2026-09-25 to 29): photo/label AI, history import, reminders, body fat, Training + sports + muscle map, exercise calories, supplements | Unit and e2e tests green; verified on the emulator |
-| 8 | Voice meal input with Bulgarian-to-English translation; Bulgarian product data (planned) | See docs/CLAUDE_HANDOFF.md "Next: voice + Bulgarian" |
+| 8 | Voice meal input with Bulgarian-to-English translation; Bulgarian products via Open Food Facts (done 2026-09-29) | See docs/CLAUDE_HANDOFF.md "Next: voice + Bulgarian" |
 | QA | Full cross-project integration | Playwright smoke flow, manual checklist, and both platform builds pass |
 
 ## Ownership and Quality Gates
@@ -101,7 +101,7 @@ Waves run in sequence; workstreams within a wave have disjoint file ownership. T
 - The QA baseline is now executable in Chromium desktop and Pixel 7 emulation with `npm run e2e`; it covers onboarding and a quick food-log update end to end.
 - NEVO 2025 is bundled (2026-09-27).
 - Wave 7 additions are done (see docs/CLAUDE_HANDOFF.md). At the last check: 316 unit and 24 e2e tests passing.
-- Wave 8 (voice + Bulgarian) is planned and not started.
+- Wave 8 (voice + Bulgarian) is done. Official Bulgarian composition tables (NCPHA) are not used because of licensing; Open Food Facts BG plus translation to English (grounded on NEVO) cover it.
 
 ## Verification Checklist
 

@@ -20,11 +20,12 @@ All plan waves are implemented. The app works as a browser PWA, as an Android AP
 | Training tab (replaces Weight tab; Weight log under More): ~100 built-in exercises + custom, live workout with rest timer and last-time hints, templates, PRs/e1RM, front/back muscle map of weekly hard sets (10–20 guideline); net burn estimate (MET − 1), cardio logged in minutes; Settings → Exercise calories Off/Half/Full adds it to that day's target as carbs (default Off) | done (2026-09-29) |
 | Sports and activities (30, e.g. volleyball, basketball, korfball, hockey, padel), logged in minutes; sessions show active minutes and ~kcal instead of sets/volume; not counted as hard sets on the muscle map | done (2026-09-29) |
 | Android keyboard: adjustResize + `interactive-widget=resizes-content` + focus scroll-into-view (`src/app/keyboard.ts`); still to verify on a device | done, unverified on device |
+| Voice meal input (Android recogniser / Web Speech / Gemini-OpenAI transcription), Bulgarian→English translation, Open Food Facts region NL/BG/both (`src/lib/native/speech.ts`, `src/lib/ai/translate.ts`, Settings > Food search / AI > Voice language) | done; mic permission and listening verified on the emulator; real speech still to test on a phone |
 | Supplements: daily checklist (dashboard + page), adherence/streak, Android reminders (ids 200+), protein powder etc. add food-log entries | done (2026-09-28) |
 | Android: icons, splash, edge-to-edge insets, dark system bars | done, emulator-verified |
 | Windows: exe + NSIS installer; data survives a restart | done, verified |
 
-Verification at the last commit: `npm run build` ✓, `npm test` 316 ✓, `npm run e2e` 24 ✓ twice in a row (desktop and Pixel 7), `npm run desktop:build` ✓, Android debug APK installed and exercised on the Pixel 7 API 35 emulator.
+Verification at the last commit: `npm run build` ✓, `npm test` 322 ✓, `npm run e2e` 26 ✓ (desktop and Pixel 7), `npm run desktop:build` ✓, Android debug APK installed and exercised on the Pixel 7 API 35 emulator.
 
 ## Fixes in the 2026-09-25 Claude pass (what the audit of Codex's work found)
 
@@ -43,7 +44,7 @@ Verification at the last commit: `npm run build` ✓, `npm test` 316 ✓, `npm r
 ## Recent fix to know about (2026-09-29)
 Settings > About used to call `loadNevo()`, which fetches the dataset AND builds the MiniSearch index. That slowed Settings enough that e2e tests navigating right after a click lost their IndexedDB writes. The credit now uses `loadNevoHeader()`. E2E tests must wait for a save to be visible (e.g. `aria-pressed="true"` on Segmented buttons, sheet hidden) before `page.goto`.
 
-## Next: voice + Bulgarian (Wave 8, not started)
+## Voice + Bulgarian (Wave 8): DONE 2026-09-29. The design below is as built.
 The user asked for:
 1. Describing a meal by voice.
 2. Bulgarian speech translated to English and entered into the description.
