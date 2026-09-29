@@ -57,6 +57,7 @@ test('weekly check-in proposes targets and applying them updates the dashboard',
   await expect(page.getByText('Proposed daily targets')).toBeVisible();
   const proposed = await page.locator('text=/^\\d{4}kcal$/').first().innerText();
   await page.getByRole('button', { name: 'Apply targets' }).click();
+  await expect(page.getByRole('status')).toHaveText('Targets updated for today.');
   await page.goto('/');
   await expect(page.getByText(`of ${Number(proposed.replace('kcal', '')).toLocaleString('en-US')} kcal`).first()).toBeVisible();
   await expect(page.getByText('Weekly check-in ready')).toBeHidden();
