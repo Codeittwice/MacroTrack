@@ -162,7 +162,7 @@ test('estimates body fat with a tape measure and tracks body composition', async
 test('logs a workout, updates the muscle map, and reuses it as a template', async ({ page }) => {
   await seed(page, 3);
   await page.goto('/training');
-  await page.getByRole('button', { name: 'Start empty workout' }).click();
+  await page.getByRole('button', { name: 'Start workout or activity' }).click();
   await page.getByRole('button', { name: 'Add exercise' }).click();
   const picker = page.getByRole('dialog');
   await picker.getByLabel('Search exercises').fill('bench press');
@@ -225,7 +225,7 @@ test('adds workout calories to the day target when the setting is on', async ({ 
   await page.goto('/settings');
   await page.getByRole('button', { name: 'Full', exact: true }).click();
   await page.goto('/training');
-  await page.getByRole('button', { name: 'Start empty workout' }).click();
+  await page.getByRole('button', { name: 'Start workout or activity' }).click();
   await page.getByRole('button', { name: 'Add exercise' }).click();
   await page.getByRole('dialog').getByLabel('Search exercises').fill('running');
   await page.getByRole('dialog').getByRole('button', { name: /^Running/ }).first().click();

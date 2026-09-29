@@ -5,14 +5,18 @@ import type { Equipment, ExerciseDef, Muscle } from '@/db/types';
 import { allExercises, createCustomExercise, searchExercises, useCustomExercises } from '@/lib/training/actions';
 import { MUSCLE_LABEL, MUSCLES } from '@/lib/training/exercises';
 
-const EQUIPMENT: Equipment[] = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'kettlebell', 'band', 'cardio', 'other'];
+const EQUIPMENT: Equipment[] = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'kettlebell', 'band', 'cardio', 'sport', 'other'];
+type Category = 'all' | 'gym' | 'cardio' | 'sport';
 
 export function ExercisePicker({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (def: ExerciseDef) => void }) {
   const custom = useCustomExercises();
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState<Muscle | ''>('');
+  const [category, setCategory] = useState<Category>('all');
   const [creating, setCreating] = useState(false);
-  const results = useMemo(() => searchExercises(allExercises(custom), query, muscle || undefined).slice(0, 60), [custom, query, muscle]);
+  const results = useMemo(() => searchExercises(allExercises(custom), query, muscle || undefined)
+    .filter((e) => category === 'all' || (category === 'sport' ? e.equipment === 'sport' : category === 'cardio' ? e.kind === 'cardio' && e.equipment !== 'sport' : e.kind !== 'cardio'))
+    .slice(0, 80), [custom, query, muscle, category]);
 
   return (
     <Sheet open={open} onClose={onClose} title={creating ? 'New exercise' : 'Add exercise'}>
@@ -24,6 +28,7 @@ export function ExercisePicker({ open, onClose, onPick }: { open: boolean; onClo
             <Search size={18} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
             <Input autoFocus aria-label="Search exercises" placeholder="Search exercises, e.g. bankdrukken" value={query} onChange={(e) => setQuery(e.target.value)} className="pl-10" />
           </label>
+          <Segmented<Category> options={[{ value: 'all', label: 'All' }, { value: 'gym', label: 'Gym' }, { value: 'cardio', label: 'Cardio' }, { value: 'sport', label: 'Sports' }]} value={category} onChange={setCategory} />
           <select aria-label="Filter by muscle" value={muscle} onChange={(e) => setMuscle(e.target.value as Muscle | '')} className="h-10 rounded-xl border border-border bg-surface-2 px-3 text-sm">
             <option value="">All muscles</option>
             {MUSCLES.map((m) => <option key={m} value={m}>{MUSCLE_LABEL[m]}</option>)}
@@ -32,7 +37,7 @@ export function ExercisePicker({ open, onClose, onPick }: { open: boolean; onClo
             {results.map((e) => (
               <button key={e.id} type="button" onClick={() => onPick(e)} className="flex w-full flex-col items-start py-2.5 text-left hover:bg-surface-2">
                 <span className="font-medium">{e.name}{e.id.startsWith('custom:') && <span className="ml-2 rounded bg-surface-2 px-1.5 text-[10px] text-muted">Mine</span>}</span>
-                <span className="text-xs text-muted">{e.primary.map((m) => MUSCLE_LABEL[m]).join(', ')}{e.secondary.length ? ` · also ${e.secondary.map((m) => MUSCLE_LABEL[m]).join(', ')}` : ''}</span>
+                <span className="text-xs text-muted">{e.kind === 'cardio' ? 'Logged in minutes · ' : ''}{e.primary.map((m) => MUSCLE_LABEL[m]).join(', ')}{e.secondary.length ? ` · also ${e.secondary.map((m) => MUSCLE_LABEL[m]).join(', ')}` : ''}</span>
               </button>
             ))}
             {results.length === 0 && <p className="py-6 text-center text-sm text-muted">No exercises found.</p>}

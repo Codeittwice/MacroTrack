@@ -54,7 +54,7 @@ function TrainingHome() {
           <Button variant="primary" onClick={() => nav(`/training/workout/${active.id}`)}><Play size={16} /> Resume</Button>
         </Card>
       ) : (
-        <Button variant="primary" size="lg" onClick={() => void begin()}><Plus size={18} /> Start empty workout</Button>
+        <Button variant="primary" size="lg" onClick={() => void begin()}><Plus size={18} /> Start workout or activity</Button>
       )}
 
       <Card>

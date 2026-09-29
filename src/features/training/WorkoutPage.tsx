@@ -44,13 +44,14 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
 
   const completeSet = async (ex: number, set: number, done: boolean) => {
     await updateSet(workout.id, ex, set, { done });
-    if (done) setRestEnd(Date.now() + restFor * 1000);
+    // Rest timer only between strength sets, not after a run or a match.
+    if (done && lookup(workout.exercises[ex].exerciseId)?.kind !== 'cardio') setRestEnd(Date.now() + restFor * 1000);
   };
 
   const anyDone = workout.exercises.some((e) => e.sets.some((s) => s.done));
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 pb-24">
+    <div className={cx('mx-auto flex max-w-2xl flex-col gap-4', restEnd ? 'pb-44' : 'pb-24')}>
       <PageHeader
         title={<Input aria-label="Workout name" value={workout.name} onChange={(e) => void updateWorkoutMeta(workout.id, { name: e.target.value })} className="h-auto border-0 bg-transparent p-0 text-2xl font-semibold" />}
         right={<span className="flex items-center gap-1 text-sm text-muted"><Timer size={16} /> {fmtClock((now - workout.startedAt) / 1000)}</span>}
@@ -128,7 +129,7 @@ function ActiveWorkout({ workout }: { workout: Workout }) {
         </div>
       )}
 
-      <ExercisePicker open={picker} onClose={() => setPicker(false)} onPick={(def) => { void addExercise(workout.id, def); setPicker(false); }} />
+      <ExercisePicker open={picker} onClose={() => setPicker(false)} onPick={(def) => { void addExercise(workout.id, def, def.kind === 'cardio' ? 1 : 3); setPicker(false); }} />
     </div>
   );
 }

@@ -218,7 +218,7 @@ export type Muscle =
   | 'lats' | 'upperBack' | 'traps' | 'lowerBack' | 'abs' | 'obliques'
   | 'glutes' | 'quads' | 'hamstrings' | 'adductors' | 'calves';
 
-export type Equipment = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight' | 'kettlebell' | 'band' | 'cardio' | 'other';
+export type Equipment = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight' | 'kettlebell' | 'band' | 'cardio' | 'sport' | 'other';
 
 export interface ExerciseDef {
   id: string;
