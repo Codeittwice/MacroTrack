@@ -224,7 +224,7 @@ export interface ProgressPhoto extends Syncable {
 export type Muscle =
   | 'chest' | 'frontDelts' | 'sideDelts' | 'rearDelts' | 'biceps' | 'triceps' | 'forearms'
   | 'lats' | 'upperBack' | 'traps' | 'lowerBack' | 'abs' | 'obliques'
-  | 'glutes' | 'quads' | 'hamstrings' | 'adductors' | 'calves';
+  | 'glutes' | 'quads' | 'hamstrings' | 'adductors' | 'calves' | 'shins';
 
 export type Equipment = 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight' | 'kettlebell' | 'band' | 'cardio' | 'sport' | 'other';
 
