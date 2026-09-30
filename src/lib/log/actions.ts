@@ -16,6 +16,9 @@ export interface AddLogEntryInput {
   food: FoodItem;
   grams: number;
   servingLabel?: string;
+  batchId?: string;
+  groupId?: string;
+  groupName?: string;
 }
 
 /** Normalize a meal index to a non-negative integer, clamped to the configured meal count. */
@@ -44,9 +47,12 @@ export async function addLogEntry(input: AddLogEntryInput): Promise<LogEntry> {
     nutrients,
     per100: { ...input.food.per100 },
     loggedAt: Date.now(),
+    ...(input.batchId ? { batchId: input.batchId } : {}),
+    ...(input.groupId ? { groupId: input.groupId, groupName: input.groupName } : {}),
   });
   await db.logEntries.put(entry);
-  if (input.food.source !== 'quick' && !input.food.id.startsWith('quick:')) {
+  // Batches are reached through Leftovers, not Recent (a recent copy would log without the batch).
+  if (input.food.source !== 'quick' && !input.food.id.startsWith('quick:') && !input.batchId) {
     await recordUse(input.food);
   }
   return entry;
@@ -101,6 +107,24 @@ export async function deleteLogEntry(id: string): Promise<void> {
   await db.logEntries.update(id, { deletedAt: now, updatedAt: now });
 }
 
+/** Show several entries as one named row (e.g. a breakfast whose ingredients were logged separately). */
+export async function groupLogEntries(ids: string[], name: string): Promise<string> {
+  const groupName = name.trim();
+  if (!groupName) throw new Error('name is required');
+  if (!ids.length) throw new Error('choose at least one entry');
+  const groupId = uuid();
+  const now = Date.now();
+  await db.transaction('rw', db.logEntries, () => Promise.all(ids.map((id) => db.logEntries.update(id, { groupId, groupName, updatedAt: now }))));
+  return groupId;
+}
+
+/** Split a group back into separate entries. */
+export async function ungroupLogEntries(groupId: string): Promise<void> {
+  const now = Date.now();
+  const entries = (await db.logEntries.toArray()).filter((e) => e.groupId === groupId);
+  await db.transaction('rw', db.logEntries, () => Promise.all(entries.map((e) => db.logEntries.update(e.id, { groupId: undefined, groupName: undefined, updatedAt: now }))));
+}
+
 /** Duplicate all entries from one date+meal into another date+meal. Returns the count copied. */
 export async function copyMeal(fromDate: DateKey, meal: number, toDate: DateKey, toMeal: number): Promise<number> {
   const entries = (await getDayEntries(fromDate)).filter((e) => e.meal === meal);
@@ -117,6 +141,12 @@ export async function copyDay(fromDate: DateKey, toDate: DateKey): Promise<numbe
 
 async function copyEntries(entries: LogEntry[], toDate: DateKey, mealFor: (e: LogEntry) => number): Promise<void> {
   const base = Date.now();
+  // A copied group gets a fresh id so the copy and the original stay separate rows.
+  const groups = new Map<string, string>();
+  const copiedGroup = (id: string) => {
+    if (!groups.has(id)) groups.set(id, uuid());
+    return groups.get(id)!;
+  };
   const copies: LogEntry[] = entries.map((e, i) =>
     newRecord<Omit<LogEntry, 'id' | 'updatedAt'>>({
       date: toDate,
@@ -131,6 +161,8 @@ async function copyEntries(entries: LogEntry[], toDate: DateKey, mealFor: (e: Lo
       nutrients: { ...e.nutrients },
       per100: e.per100 ? { ...e.per100 } : undefined,
       loggedAt: base + i,
+      ...(e.batchId ? { batchId: e.batchId } : {}),
+      ...(e.groupId ? { groupId: copiedGroup(e.groupId), groupName: e.groupName } : {}),
     }),
   );
   if (copies.length) await db.logEntries.bulkPut(copies);

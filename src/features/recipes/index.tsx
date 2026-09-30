@@ -11,8 +11,11 @@ import { createRecipe, deleteRecipe, deleteSavedMeal, updateRecipe, updateSavedM
 import { scale, sum } from '@/lib/utils/nutrients';
 import { fmtG, fmtKcal } from '@/features/addfood/format';
 import { FoodName } from '@/components/FoodName';
+import { useSearchParams } from 'react-router-dom';
+import { MealPreps } from './MealPreps';
 
-type View = 'recipes' | 'meals' | 'foods';
+type View = 'recipes' | 'preps' | 'meals' | 'foods';
+const VIEWS: View[] = ['recipes', 'preps', 'meals', 'foods'];
 type Ingredient = { food: FoodItem; grams: number };
 
 function RecipeBuilder({ open, onClose, recipe }: { open: boolean; onClose: () => void; recipe?: Recipe }) {
@@ -98,7 +101,11 @@ function SavedMealEditor({ meal, onClose }: { meal?: SavedMeal; onClose: () => v
 }
 
 export default function RecipesPage() {
-  const [view, setView] = useState<View>('recipes');
+  const [params] = useSearchParams();
+  const [view, setView] = useState<View>(() => {
+    const v = params.get('view') as View | null;
+    return v && VIEWS.includes(v) ? v : 'recipes';
+  });
   const [builderOpen, setBuilderOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe>();
   const [editingMeal, setEditingMeal] = useState<SavedMeal>();
@@ -107,7 +114,8 @@ export default function RecipesPage() {
   const customFoods = useCustomFoods();
 
   return <div className="mx-auto max-w-3xl"><PageHeader title="Foods and recipes" right={<Button variant="primary" size="sm" onClick={() => setBuilderOpen(true)}><Plus size={16} /> New recipe</Button>} />
-    <Segmented options={[{ value: 'recipes', label: 'Recipes' }, { value: 'meals', label: 'Saved meals' }, { value: 'foods', label: 'My foods' }]} value={view} onChange={setView} className="mb-4" />
+    <Segmented options={[{ value: 'recipes', label: 'Recipes' }, { value: 'preps', label: 'Meal preps' }, { value: 'meals', label: 'Saved meals' }, { value: 'foods', label: 'My foods' }]} value={view} onChange={setView} className="no-scrollbar mb-4 overflow-x-auto" />
+    {view === 'preps' && <MealPreps />}
     {view === 'recipes' && <RecipeList recipes={recipes} onEdit={(recipe) => { setEditingRecipe(recipe); setBuilderOpen(true); }} />}
     {view === 'meals' && (savedMeals === undefined ? <div className="py-8 text-center text-sm text-muted">Loading...</div> : savedMeals.length === 0 ? <EmptyState title="No saved meals yet" body="Saved meals will let you log a group of foods together." /> : <div className="flex flex-col gap-2">{savedMeals.map((meal) => <Card key={meal.id} className="flex items-center gap-3"><div className="min-w-0 flex-1"><div className="truncate font-medium">{meal.name}</div><div className="text-sm text-muted">{meal.items.length} foods</div></div><Button variant="ghost" size="sm" aria-label={`Edit ${meal.name}`} title={`Edit ${meal.name}`} onClick={() => setEditingMeal(meal)}><Pencil size={16} /></Button></Card>)}</div>)}
     {view === 'foods' && (customFoods === undefined ? <div className="py-8 text-center text-sm text-muted">Loading...</div> : customFoods.length === 0 ? <EmptyState title="No custom foods yet" body="Create one from Add Food when a product is missing." /> : <div className="flex flex-col gap-2">{customFoods.map((food) => <Card key={food.id} className="flex justify-between gap-3"><div className="min-w-0"><FoodName item={food} />{food.brand && <div className="text-sm text-muted">{food.brand}</div>}</div><div className="text-sm text-kcal">{fmtKcal(food.per100.kcal)} kcal / 100 g</div></Card>)}</div>)}

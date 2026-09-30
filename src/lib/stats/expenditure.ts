@@ -54,5 +54,5 @@ export function currentExpenditure(args: CurrentExpenditureArgs): ExpenditureRes
   }
 
   const daysSincePrevious = previous !== undefined && args.previousDate ? Math.max(0, daysBetween(args.previousDate, today)) : undefined;
-  return estimateExpenditure({ intake, trend, prior, previous, daysSincePrevious });
+  return estimateExpenditure({ intake, trend, prior, previous, daysSincePrevious, weights: weights.map((w) => ({ date: w.date, kg: w.kg })) });
 }

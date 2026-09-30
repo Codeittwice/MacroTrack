@@ -25,16 +25,34 @@
  *   100 * (daysSincePrevious ?? 7) / 7 kcal away from `previous`. When `previous` is undefined,
  *   no cap is applied (there is nothing to anchor a rate-of-change to).
  * - Confidence: n < 10 'low', 10-15 'medium', n >= 16 'high'.
+ *
+ * Changes after the 2026-09-30 audit (simulated user: true TDEE 2600, eating 2100, formula prior 2300,
+ * ±0.5 kg scale noise, 40 seeds):
+ * - Weight change from the RAW weigh-ins, not the EMA trend. The EMA (alpha 0.1) starts flat and needs
+ *   ~10-20 days to reach the true rate of loss, so in the first weeks it hid most of the loss:
+ *   mean estimate 2311 at 14 days and 2374 at 21 days (≈ -290 / -225 kcal). A least-squares line
+ *   through the outlier-filtered daily weigh-ins over the same span is unbiased: 2496 at 14 days and
+ *   2537 at 21 days (the small remainder is the deliberate shrinkage toward the prior). The trend
+ *   slope is still used when there are fewer than MIN_WEIGHINS weigh-ins in the span.
+ * - Days logged under LOW_DAY_FRACTION of the anchor are skipped as probably partly logged: a
+ *   forgotten dinner would otherwise look like a real 1000 kcal day and drag the estimate down.
+ *   Users can also flag a day incomplete in the food log (those never reach this function).
+ * - 7700 kcal/kg assumes the change is mostly fat. Early water and glycogen shifts break that, which
+ *   is one reason the first estimate is shrunk toward the formula and capped per week.
  */
 import type { DateKey } from '@/db/types';
 import { addDays, daysBetween } from '@/lib/utils/date';
-import { lsSlopePerDay } from './trend';
+import { dailyAverages, excludeWeightOutliers, lsSlopePerDay } from './trend';
 import { KCAL_PER_KG, type DailyPoint, type ExpenditureInput, type ExpenditureResult } from './types';
 
 /** Bayesian shrinkage strength: smaller K trusts raw data sooner. */
 const K = 5;
 /** Change cap: kcal per 7 days relative to `previous`. */
 const CAP_KCAL_PER_WEEK = 100;
+/** A logged day under this share of the current estimate is treated as partly logged. */
+export const LOW_DAY_FRACTION = 0.5;
+/** Raw weigh-ins needed in the span (spread over at least a week) to use them for the slope. */
+const MIN_WEIGHINS = 5;
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v));
@@ -56,6 +74,8 @@ interface WindowArgs {
   prior: number;
   previous?: number;
   daysSincePrevious?: number;
+  /** outlier-filtered daily averages of the raw weigh-ins, ascending */
+  weighIns?: { date: DateKey; kg: number }[];
 }
 
 /** O(1) lookup of a trend value by date, relying on trend being daily-continuous from trend[0]. */
@@ -68,7 +88,7 @@ function trendIndexOf(trend: DailyPoint[], date: DateKey): number {
 
 /** Shared estimator core used by both estimateExpenditure and expenditureSeries. */
 function computeWindow(args: WindowArgs): ExpenditureResult {
-  const { intake, trend, endDate, windowDays, prior, previous, daysSincePrevious } = args;
+  const { intake, trend, endDate, windowDays, prior, previous, daysSincePrevious, weighIns } = args;
   const anchor = previous !== undefined && Number.isFinite(previous) ? previous : prior;
 
   if (trend.length === 0) return { expenditure: Math.round(anchor), confidence: 'low', daysUsed: 0 };
@@ -76,26 +96,34 @@ function computeWindow(args: WindowArgs): ExpenditureResult {
   const windowStart = addDays(endDate, -windowDays); // exclusive
   const loggedDates: DateKey[] = [];
   let sum = 0;
+  let excludedDays = 0;
   for (let d = addDays(windowStart, 1); d <= endDate; d = addDays(d, 1)) {
     const kcal = intake.get(d);
     if (kcal === undefined) continue;
     if (trendIndexOf(trend, d) < 0) continue;
+    if (kcal < anchor * LOW_DAY_FRACTION) { excludedDays++; continue; }
     loggedDates.push(d);
     sum += kcal;
   }
 
   const n = loggedDates.length;
-  if (n < 10) return { expenditure: Math.round(anchor), confidence: 'low', daysUsed: n };
+  if (n < 10) return { expenditure: Math.round(anchor), confidence: 'low', daysUsed: n, excludedDays };
 
   const firstLogged = loggedDates[0];
   const lastLogged = loggedDates[n - 1];
   const dayBefore = addDays(firstLogged, -1);
   const spanStart = trendIndexOf(trend, dayBefore) >= 0 ? dayBefore : firstLogged;
 
-  const spanStartIdx = trendIndexOf(trend, spanStart);
-  const spanEndIdx = trendIndexOf(trend, lastLogged);
-  const spanPoints = trend.slice(spanStartIdx, spanEndIdx + 1);
-  const slopePerDay = lsSlopePerDay(spanPoints);
+  const rawInSpan = (weighIns ?? []).filter((w) => w.date >= spanStart && w.date <= lastLogged);
+  const useRaw = rawInSpan.length >= MIN_WEIGHINS && daysBetween(rawInSpan[0].date, rawInSpan[rawInSpan.length - 1].date) >= 7;
+  let slopePerDay: number;
+  if (useRaw) {
+    slopePerDay = lsSlopePerDay(rawInSpan.map((w) => ({ date: w.date, value: w.kg })));
+  } else {
+    const spanStartIdx = trendIndexOf(trend, spanStart);
+    const spanEndIdx = trendIndexOf(trend, lastLogged);
+    slopePerDay = lsSlopePerDay(trend.slice(spanStartIdx, spanEndIdx + 1));
+  }
 
   const avgIntake = sum / n;
   const raw = avgIntake - slopePerDay * KCAL_PER_KG;
@@ -110,7 +138,20 @@ function computeWindow(args: WindowArgs): ExpenditureResult {
     result = clamp(blended, previous - maxDelta, previous + maxDelta);
   }
 
-  return { expenditure: Math.round(result), confidence: confidenceFor(n), daysUsed: n };
+  return {
+    expenditure: Math.round(result),
+    confidence: confidenceFor(n),
+    daysUsed: n,
+    excludedDays,
+    slopeSource: useRaw ? 'weighins' : 'trend',
+    avgIntake: Math.round(avgIntake),
+    kgPerWeek: Math.round(slopePerDay * 7 * 100) / 100,
+  };
+}
+
+/** Outlier-filtered daily averages of raw weigh-ins (the same filter the trend uses). */
+function prepareWeighIns(weights: { date: DateKey; kg: number }[] | undefined) {
+  return weights ? excludeWeightOutliers(dailyAverages(weights)) : undefined;
 }
 
 function mergeIntake(intake: { date: DateKey; kcal: number }[]): Map<DateKey, number> {
@@ -139,6 +180,7 @@ export function estimateExpenditure(i: ExpenditureInput): ExpenditureResult {
     prior: i.prior,
     previous: i.previous,
     daysSincePrevious: i.daysSincePrevious,
+    weighIns: prepareWeighIns(i.weights),
   });
 }
 
@@ -147,10 +189,11 @@ export function expenditureSeries(
   intake: { date: DateKey; kcal: number }[],
   trend: DailyPoint[],
   prior: number,
-  opts?: { windowDays?: number },
+  opts?: { windowDays?: number; weights?: { date: DateKey; kg: number }[] },
 ): DailyPoint[] {
   const windowDays = opts?.windowDays ?? 21;
   const intakeMap = mergeIntake(intake);
+  const weighIns = prepareWeighIns(opts?.weights);
   const out: DailyPoint[] = new Array(trend.length);
   let previous: number | undefined;
   for (let k = 0; k < trend.length; k++) {
@@ -163,6 +206,7 @@ export function expenditureSeries(
       prior,
       previous,
       daysSincePrevious: previous === undefined ? undefined : 1,
+      weighIns,
     });
     out[k] = { date: endDate, value: r.expenditure };
     previous = r.expenditure;

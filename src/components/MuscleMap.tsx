@@ -1,6 +1,6 @@
 import type { Muscle } from '@/db/types';
 import { MUSCLE_LABEL } from '@/lib/training/exercises';
-import { WEEKLY_SET_TARGET } from '@/lib/training/volume';
+import { BAND_LABEL, volumeBand, type VolumeBand } from '@/lib/training/volume';
 
 /**
  * Anatomical front/back figure. Muscles are closed Catmull-Rom shapes drawn over a skin-tone body;
@@ -88,18 +88,26 @@ export interface MuscleMapProps {
   sets: Partial<Record<Muscle, number>>;
   selected?: Muscle;
   onSelect?: (m: Muscle) => void;
-  /** smaller, non-interactive version (workout summary) */
+  /** smaller, non-interactive version (one workout's summary), coloured by set count only */
   compact?: boolean;
-  /** multiplies sets for colouring only (e.g. one workout shown against a weekly scale) */
-  colorScale?: number;
 }
 
-/** Untrained muscles are a slightly darker body tone; below the guideline the green deepens with each set. */
-export function muscleFill(sets: number): string {
-  if (sets <= 0) return 'color-mix(in srgb, var(--muted) 48%, var(--surface))';
-  if (sets < WEEKLY_SET_TARGET.min) return `color-mix(in srgb, var(--primary) ${Math.round(30 + (55 * sets) / WEEKLY_SET_TARGET.min)}%, var(--surface))`;
-  if (sets <= WEEKLY_SET_TARGET.max) return 'var(--primary)';
-  return 'var(--warning)';
+const UNTRAINED = 'color-mix(in srgb, var(--muted) 48%, var(--surface))';
+
+/** Weekly colouring against each muscle's own landmarks: faint → accent as it reaches the range, amber when high, red past MRV. */
+export const BAND_FILL: Record<VolumeBand, string> = {
+  none: UNTRAINED,
+  under: 'color-mix(in srgb, var(--primary) 35%, var(--surface))',
+  building: 'color-mix(in srgb, var(--primary) 65%, var(--surface))',
+  optimal: 'var(--primary)',
+  high: 'var(--warning)',
+  over: 'var(--danger)',
+};
+
+/** Single-workout colouring (compact map): the accent deepens with each set, no judgement of the week. */
+export function intensityFill(sets: number): string {
+  if (sets <= 0) return UNTRAINED;
+  return `color-mix(in srgb, var(--primary) ${Math.round(Math.min(100, 35 + sets * 13))}%, var(--surface))`;
 }
 
 export const fmtSets = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
@@ -124,12 +132,12 @@ function Figure({ shapes, label, props }: { shapes: Partial<Record<Muscle, strin
               key={m}
               role={interactive ? 'button' : 'img'}
               tabIndex={interactive ? 0 : undefined}
-              aria-label={`${MUSCLE_LABEL[m]}: ${fmtSets(n)} sets`}
+              aria-label={`${MUSCLE_LABEL[m]}: ${fmtSets(n)} sets${compact ? '' : `, ${BAND_LABEL[volumeBand(m, n)].toLowerCase()}`}`}
               aria-pressed={interactive ? isSel : undefined}
               onClick={interactive ? () => onSelect!(m) : undefined}
               onKeyDown={interactive ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect!(m); } } : undefined}
               className={interactive ? 'cursor-pointer outline-none' : undefined}
-              fill={muscleFill(n * (props.colorScale ?? 1))}
+              fill={compact ? intensityFill(n) : BAND_FILL[volumeBand(m, n)]}
               stroke={isSel ? 'var(--text)' : BODY_FILL}
               strokeWidth={isSel ? 2.5 : 2}
               strokeLinejoin="round"
@@ -145,7 +153,7 @@ function Figure({ shapes, label, props }: { shapes: Partial<Record<Muscle, strin
   );
 }
 
-/** Front and back body figure coloured by hard sets per muscle, against the 10–20 sets/week guideline. */
+/** Front and back body figure coloured by hard sets per muscle, against each muscle's weekly landmarks. */
 export function MuscleMap(props: MuscleMapProps) {
   return (
     <div>
@@ -155,10 +163,7 @@ export function MuscleMap(props: MuscleMapProps) {
       </div>
       {!props.compact && (
         <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted">
-          <Legend color={muscleFill(0)} label="Not trained" />
-          <Legend color={muscleFill(3)} label={`Under ${WEEKLY_SET_TARGET.min} sets`} />
-          <Legend color={muscleFill(WEEKLY_SET_TARGET.min)} label={`${WEEKLY_SET_TARGET.min}–${WEEKLY_SET_TARGET.max} sets`} />
-          <Legend color={muscleFill(WEEKLY_SET_TARGET.max + 1)} label={`Over ${WEEKLY_SET_TARGET.max}`} />
+          {(['none', 'under', 'building', 'optimal', 'high', 'over'] as VolumeBand[]).map((b) => <Legend key={b} color={BAND_FILL[b]} label={BAND_LABEL[b]} />)}
         </div>
       )}
     </div>

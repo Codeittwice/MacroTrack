@@ -6,7 +6,9 @@ import { MuscleMap, fmtSets } from '@/components/MuscleMap';
 import type { Muscle, Workout } from '@/db/types';
 import { deleteTemplate, startWorkout, useActiveWorkout, useExerciseLookup, useTemplates, useWorkouts } from '@/lib/training/actions';
 import { MUSCLE_LABEL } from '@/lib/training/exercises';
-import { sessionSummary, weeklySetsByMuscle, WEEKLY_SET_TARGET } from '@/lib/training/volume';
+import { BAND_LABEL, LANDMARKS, sessionSummary, volumeAdvice, volumeBand, weeklySetsByMuscle } from '@/lib/training/volume';
+import { BAND_FILL } from '@/components/MuscleMap';
+import { MuscleHistoryChart, WeeklyVolume, useWeeklyHistory } from './WeeklyVolume';
 import { useTrend } from '@/lib/weight/queries';
 import { addDays, today } from '@/lib/utils/date';
 import { estimatedBurnKcal, newRecordsIn } from '@/lib/training/strength';
@@ -41,6 +43,7 @@ function TrainingHome() {
   const weekly = useMemo(() => weeklySetsByMuscle(active ? [...finished, active] : finished, today(), lookup), [finished, active, lookup]);
   const weeklySets = useMemo(() => Object.fromEntries(Object.entries(weekly).map(([m, v]) => [m, v?.sets ?? 0])) as Partial<Record<Muscle, number>>, [weekly]);
   const thisWeek = finished.filter((w) => w.date > addDays(today(), -7)).length;
+  const history = useWeeklyHistory(useMemo(() => (active ? [...finished, active] : finished), [finished, active]), lookup);
 
   const begin = async (templateId?: string) => {
     const w = await startWorkout({ template: templates?.find((t) => t.id === templateId) });
@@ -70,6 +73,8 @@ function TrainingHome() {
         <MuscleMap sets={weeklySets} selected={muscle} onSelect={setMuscle} />
       </Card>
 
+      <WeeklyVolume history={history} onSelect={setMuscle} />
+
       <Card>
         <div className="mb-2 font-semibold">Templates</div>
         {templates && templates.length > 0 ? (
@@ -96,13 +101,8 @@ function TrainingHome() {
 
       <Sheet open={!!muscle} onClose={() => setMuscle(undefined)} title={muscle ? MUSCLE_LABEL[muscle] : ''}>
         <div className="flex flex-col gap-3">
-          <div className="text-3xl font-semibold">{fmtSets(sel?.sets ?? 0)} <span className="text-base font-normal text-muted">hard sets this week</span></div>
-          <p className="text-sm text-muted">
-            {(sel?.sets ?? 0) < WEEKLY_SET_TARGET.min ? `Most people grow best with ${WEEKLY_SET_TARGET.min}–${WEEKLY_SET_TARGET.max} sets per muscle per week.`
-              : (sel?.sets ?? 0) <= WEEKLY_SET_TARGET.max ? 'In the typical 10–20 sets range for muscle growth.'
-              : 'Above 20 sets. Fine if you recover well, but more isn’t always better.'}
-            {' '}Main muscles count a full set; helper muscles count half.
-          </p>
+          {muscle && <MuscleVolumeSummary muscle={muscle} sets={sel?.sets ?? 0} />}
+          {muscle && <MuscleHistoryChart history={history} muscle={muscle} />}
           {sel?.exercises.length ? (
             <div className="divide-y divide-border rounded-xl bg-surface-2 px-3">
               {sel.exercises.map((e) => (
@@ -114,6 +114,29 @@ function TrainingHome() {
       </Sheet>
       <RecentPRs workouts={finished} />
       <PastWorkoutSheet open={pastFor !== null} date={pastFor || undefined} onClose={() => setPastFor(null)} />
+    </div>
+  );
+}
+
+/** Sets in the last 7 days on a scale from 0 to past MRV, with the productive range marked. */
+function MuscleVolumeSummary({ muscle, sets }: { muscle: Muscle; sets: number }) {
+  const l = LANDMARKS[muscle];
+  const band = volumeBand(muscle, sets);
+  const scaleMax = Math.max(l.mrv * 1.15, sets);
+  const pos = (v: number) => `${Math.min(100, (v / scaleMax) * 100)}%`;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between">
+        <div className="text-3xl font-semibold">{fmtSets(sets)} <span className="text-base font-normal text-muted">hard sets, last 7 days</span></div>
+        <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: BAND_FILL[band], color: band === 'none' ? 'var(--text)' : 'var(--on-primary)' }}>{BAND_LABEL[band]}</span>
+      </div>
+      <div className="relative h-3 rounded-full bg-surface-2" aria-hidden>
+        <div className="absolute inset-y-0 rounded-full bg-primary/25" style={{ left: pos(l.low), width: `calc(${pos(l.high)} - ${pos(l.low)})` }} />
+        <div className="absolute inset-y-0 w-0.5 bg-warning" style={{ left: pos(l.mrv) }} />
+        <div className="absolute -top-0.5 h-4 w-1.5 -translate-x-1/2 rounded-full bg-text" style={{ left: pos(sets) }} />
+      </div>
+      <div className="flex justify-between text-[11px] text-muted"><span>0</span><span>min {l.mev}</span><span>optimal {l.low}–{l.high}</span><span>max ~{l.mrv}</span></div>
+      <p className="text-sm text-muted">{volumeAdvice(muscle, sets)} Main muscles count a full set; helper muscles count half.</p>
     </div>
   );
 }

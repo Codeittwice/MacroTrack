@@ -1,14 +1,14 @@
 /** Shared data hooks (integrator-owned). */
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/schema';
-import { DEFAULT_SETTINGS, alive } from '@/db/repo';
+import { DEFAULT_SETTINGS, alive, withDefaults } from '@/db/repo';
 import type { DateKey, MacroTargets, Profile, Settings, TargetSet } from '@/db/types';
 import { fromDateKey } from '@/lib/utils/date';
 import { exerciseBonusKcal } from '@/lib/training/burn';
 
 export function useSettings(): Settings {
   const stored = useLiveQuery(() => db.settings.get('settings'), []);
-  return { ...DEFAULT_SETTINGS, ...stored };
+  return withDefaults(stored);
 }
 
 /** undefined while loading, null when not onboarded. */

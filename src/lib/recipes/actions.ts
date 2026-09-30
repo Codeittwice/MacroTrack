@@ -4,6 +4,8 @@ import { alive, newRecord } from '@/db/repo';
 import type { DateKey, FoodItem, LogEntry, Recipe, SavedMeal } from '@/db/types';
 import { addLogEntry, deleteLogEntry } from '@/lib/log/actions';
 import { recipeToFoodItem } from '@/lib/food-sources/user';
+import { uuid } from '@/lib/utils/id';
+import { createBatch, logFromBatch } from '@/lib/batches/actions';
 
 export interface RecipeIngredient {
   food: FoodItem;
@@ -104,7 +106,8 @@ export async function saveLogEntriesAsMeal(name: string, entries: LogEntry[]): P
 /** Log every item in a saved meal, snapshotting current serving amounts into the target meal. */
 export async function logSavedMeal(savedMeal: SavedMeal, date: DateKey, meal: number): Promise<LogEntry[]> {
   if (!alive(savedMeal)) throw new Error(`saved meal ${savedMeal.id} not found`);
-  return Promise.all(savedMeal.items.map((item) => addLogEntry({ date, meal, food: item.food, grams: item.grams })));
+  const groupId = uuid();
+  return Promise.all(savedMeal.items.map((item) => addLogEntry({ date, meal, food: item.food, grams: item.grams, groupId, groupName: savedMeal.name })));
 }
 
 /** Log `portions` servings of a recipe as one entry (e.g. "1 serving" of a four-portion meal prep). */
@@ -135,7 +138,13 @@ export async function saveLogEntriesAsRecipe(
   const recipe = await createRecipe({ name: opts.name, ingredients, servings: opts.servings, yieldGrams: opts.yieldGrams ?? ingredients.reduce((t, i) => t + i.grams, 0) });
   if (replace) {
     await Promise.all(entries.map((e) => deleteLogEntry(e.id)));
-    if (replace.portions > 0) await logRecipeServings(recipe, replace.date, replace.meal, replace.portions);
+    if (recipe.servings > 1) {
+      // A multi-portion pot becomes a meal prep, so the portions not eaten yet show up as leftovers.
+      const batch = await createBatch({ recipe, portions: recipe.servings, cookedOn: replace.date });
+      if (replace.portions > 0) await logFromBatch(batch, replace.date, replace.meal, { portions: replace.portions });
+    } else if (replace.portions > 0) {
+      await logRecipeServings(recipe, replace.date, replace.meal, replace.portions);
+    }
   }
   return recipe;
 }

@@ -14,8 +14,8 @@ export function FoodSearchSection() {
         <div role="group" aria-label="Food names">
           <Segmented<Settings['foodNames']>
             options={[{ value: 'en', label: 'English' }, { value: 'nl', label: 'Nederlands' }, { value: 'both', label: 'Both' }]}
-            value={settings.foodNames ?? 'both'}
-            onChange={(foodNames) => void updateSettings({ foodNames })}
+            value={settings.foodNames ?? 'en'}
+            onChange={(foodNames) => void updateSettings({ foodNames, foodNamesChosen: true })}
           />
         </div>
         <p className="text-sm text-muted">"Both" shows the English name with the Dutch one underneath. All NEVO foods have both; supermarket products show English only when Open Food Facts has it.</p>

@@ -7,6 +7,7 @@ import { ReminderSync } from './app/ReminderSync';
 import './styles/index.css';
 import { registerSW } from 'virtual:pwa-register';
 import { keepFocusedFieldVisible } from './app/keyboard';
+import { installBackButton } from './app/backStack';
 
 const isNativeShell = 'Capacitor' in window && (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
   || '__TAURI_INTERNALS__' in window;
@@ -18,6 +19,7 @@ if (isNativeShell) {
 }
 
 keepFocusedFieldVisible();
+void installBackButton();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -32,6 +32,15 @@ export interface ProposeCheckInResult {
   confidence: 'low' | 'medium' | 'high';
   /** Days between the last weigh-in and the check-in date (0 = weighed today). */
   staleDays: number;
+  /** The inputs behind the expenditure estimate, for "How this is calculated". */
+  details?: {
+    prior: number;
+    daysUsed: number;
+    excludedDays: number;
+    avgIntake?: number;
+    kgPerWeek?: number;
+    slopeSource?: 'weighins' | 'trend';
+  };
 }
 
 function round2(v: number): number {
@@ -59,6 +68,7 @@ export function proposeCheckIn(args: ProposeCheckInArgs): ProposeCheckInResult {
     prior,
     previous: previousExpenditure,
     daysSincePrevious: args.previousDate ? Math.max(0, daysBetween(args.previousDate, date)) : undefined,
+    weights,
   });
 
   const expenditure = est.expenditure;
@@ -86,5 +96,13 @@ export function proposeCheckIn(args: ProposeCheckInArgs): ProposeCheckInResult {
     },
     confidence,
     staleDays: Number.isFinite(staleDays) ? staleDays : -1,
+    details: {
+      prior,
+      daysUsed: est.daysUsed,
+      excludedDays: est.excludedDays ?? 0,
+      avgIntake: est.avgIntake,
+      kgPerWeek: est.kgPerWeek,
+      slopeSource: est.slopeSource,
+    },
   };
 }

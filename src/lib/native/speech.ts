@@ -61,26 +61,66 @@ export async function startListening(o: ListenOptions): Promise<SpeechSession> {
   throw new Error('Voice input needs Chrome, the Android app, or a Gemini/OpenAI key on this device.');
 }
 
+/** Joins recognised segments into one transcript without doubled spaces. */
+export function joinSegments(segments: string[]): string {
+  return segments.map((s) => s.trim()).filter(Boolean).join(' ');
+}
+
+/** Recognisers end a session after a short pause; restart until the user taps Stop, up to this many times. */
+const MAX_RESTARTS = 30;
+/** Two silent sessions in a row end listening on their own. */
+const MAX_SILENT = 2;
+
+/**
+ * Android's recogniser stops after about a second of silence, which used to cut a description off at
+ * the first pause. Each session's text is kept as a segment and listening restarts until Stop.
+ */
 async function startNative(o: ListenOptions): Promise<SpeechSession> {
   const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
   if (!(await SpeechRecognition.available()).available) throw new Error('Speech recognition is not available on this phone.');
   let perm = await SpeechRecognition.checkPermissions();
   if (perm.speechRecognition !== 'granted') perm = await SpeechRecognition.requestPermissions();
   if (perm.speechRecognition !== 'granted') throw new Error('Allow microphone access for MacroTrack to describe meals by voice.');
-  let last = '';
+  const segments: string[] = [];
+  let current = '';
   let done = false;
+  let userStopped = false;
+  let silent = 0;
+  let restarts = 0;
+  const commit = () => {
+    if (current.trim()) { segments.push(current); silent = 0; } else silent++;
+    current = '';
+  };
   const finish = async () => {
     if (done) return;
     done = true;
+    if (current.trim()) segments.push(current);
     await SpeechRecognition.removeAllListeners();
-    o.onFinal(last.trim());
+    o.onFinal(joinSegments(segments));
   };
-  await SpeechRecognition.addListener('partialResults', (d) => { last = d.matches?.[0] ?? last; o.onPartial?.(last); });
-  await SpeechRecognition.addListener('listeningState', (d) => { if (d.status === 'stopped') void finish(); });
-  SpeechRecognition.start({ language: o.lang, partialResults: true, popup: false, maxResults: 1 }).catch((e: unknown) => {
-    if (!done) { done = true; o.onError(e instanceof Error ? e.message : 'Speech recognition failed.'); }
+  const listen = () => {
+    SpeechRecognition.start({ language: o.lang, partialResults: true, popup: false, maxResults: 1 }).catch((e: unknown) => {
+      if (done) return;
+      // "No match" after silence is not a failure: it just means nothing (more) was said.
+      if (restarts > 0 || segments.length > 0 || /no match|didn't understand|^7$/i.test(String(e instanceof Error ? e.message : e))) { void finish(); return; }
+      done = true;
+      void SpeechRecognition.removeAllListeners();
+      o.onError(e instanceof Error ? e.message : 'Speech recognition failed.');
+    });
+  };
+  await SpeechRecognition.addListener('partialResults', (d) => {
+    current = d.matches?.[0] ?? current;
+    o.onPartial?.(joinSegments([...segments, current]));
   });
-  return { stop: () => { void SpeechRecognition.stop().finally(() => void finish()); } };
+  await SpeechRecognition.addListener('listeningState', (d) => {
+    if (d.status !== 'stopped' || done) return;
+    commit();
+    if (userStopped || silent >= MAX_SILENT || restarts >= MAX_RESTARTS) { void finish(); return; }
+    restarts++;
+    listen();
+  });
+  listen();
+  return { stop: () => { userStopped = true; void SpeechRecognition.stop().catch(() => undefined).finally(() => void finish()); } };
 }
 
 function startWeb(o: ListenOptions): SpeechSession {
@@ -89,15 +129,34 @@ function startWeb(o: ListenOptions): SpeechSession {
   rec.lang = o.lang;
   rec.interimResults = true;
   rec.continuous = true;
-  let text = '';
+  const segments: string[] = [];
+  let session = '';
+  let stopped = false;
+  let failed = false;
+  let silent = 0;
+  let restarts = 0;
   rec.onresult = (e) => {
-    text = Array.from(e.results).map((r) => r[0].transcript).join(' ');
-    o.onPartial?.(text);
+    session = Array.from(e.results).map((r) => r[0].transcript).join(' ');
+    o.onPartial?.(joinSegments([...segments, session]));
   };
-  rec.onerror = (e) => o.onError(e.error === 'not-allowed' ? 'Allow microphone access to describe meals by voice.' : `Speech recognition error: ${e.error}`);
-  rec.onend = () => o.onFinal(text.trim());
+  rec.onerror = (e) => {
+    // Silence and our own stop are normal ends; onend still delivers the text.
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
+    failed = true;
+    o.onError(e.error === 'not-allowed' ? 'Allow microphone access to describe meals by voice.' : `Speech recognition error: ${e.error}`);
+  };
+  rec.onend = () => {
+    if (failed) return;
+    if (session.trim()) { segments.push(session); silent = 0; } else silent++;
+    session = '';
+    if (!stopped && silent < MAX_SILENT && restarts < MAX_RESTARTS) {
+      restarts++;
+      try { rec.start(); return; } catch { /* fall through to finishing */ }
+    }
+    o.onFinal(joinSegments(segments));
+  };
   rec.start();
-  return { stop: () => rec.stop() };
+  return { stop: () => { stopped = true; rec.stop(); } };
 }
 
 async function startRecording(o: ListenOptions): Promise<SpeechSession> {

@@ -12,3 +12,6 @@
 .swatch-sunset {
   background: var(--swatch-sunset, var(--fat));
 }
+.swatch-purple {
+  background: var(--swatch-purple, var(--kcal));
+}

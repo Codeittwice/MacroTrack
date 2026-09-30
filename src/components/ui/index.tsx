@@ -4,7 +4,8 @@
  */
 import clsx from 'clsx';
 import { Minus, Plus, X } from 'lucide-react';
-import { useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
+import { pushOverlay } from '@/app/backStack';
 
 export { clsx as cx };
 
@@ -43,6 +44,29 @@ export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputEleme
     <input
       className={clsx(
         'h-11 w-full rounded-xl border border-border bg-surface-2 px-3 outline-none placeholder:text-muted focus:border-primary',
+        className,
+      )}
+      {...rest}
+    />
+  );
+}
+
+/** Multi-line input that grows with its text (from `rows` up to about half the screen). */
+export function Textarea({ className, value, rows = 4, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement> & { value: string }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight + 2, window.innerHeight * 0.5)}px`;
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      rows={rows}
+      value={value}
+      className={clsx(
+        'w-full resize-none rounded-xl border border-border bg-surface-2 px-3 py-2.5 leading-relaxed outline-none placeholder:text-muted focus:border-primary',
         className,
       )}
       {...rest}
@@ -180,6 +204,12 @@ export function Segmented<T extends string | number>({
 export function Sheet({ open, onClose, title, children, wide }: {
   open: boolean; onClose: () => void; title?: ReactNode; children: ReactNode; wide?: boolean;
 }) {
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    return pushOverlay(() => closeRef.current());
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();

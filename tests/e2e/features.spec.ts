@@ -297,7 +297,7 @@ test('translates a Bulgarian meal description to English before estimating', asy
   await expect(dialog.getByText('Translated from Bulgarian: две филийки хляб с кашкавал')).toBeVisible();
 });
 
-test('saves a described meal prep as a recipe and logs one serving, with English and Dutch names', async ({ page }) => {
+test('saves a described meal prep, logs one portion and offers the rest as leftovers', async ({ page }) => {
   await seed(page, 2);
   await page.evaluate(async () => {
     const load = (p: string) => import(/* @vite-ignore */ p);
@@ -305,7 +305,7 @@ test('saves a described meal prep as a recipe and logs one serving, with English
     await updateSettings({ aiProvider: 'claude', apiKeys: { claude: 'test-key' } });
   });
   await page.route('**/openfoodfacts.org/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"products":[]}' }));
-  const estimate = { items: [
+  const estimate = { dishName: 'Chicken rice prep', portions: 4, items: [
     { name: 'Boiled white rice', grams: 800, nutrients: { kcal: 1040, protein: 22, carbs: 224, fat: 2 }, confidence: 0.8, foodQuery: 'Rijst witte gekookt' },
     { name: 'Chicken breast', grams: 400, nutrients: { kcal: 600, protein: 120, carbs: 0, fat: 12 }, confidence: 0.8, foodQuery: 'Kipfilet bereid' },
   ] };
@@ -315,19 +315,75 @@ test('saves a described meal prep as a recipe and logs one serving, with English
   }));
   await page.goto('/log?add=2&tab=ai');
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Meal description').fill('meal prep: 800 g rice and 400 g chicken');
+  await dialog.getByLabel('Meal description').fill('Meal prep: 800 g rice and 400 g chicken, makes 4 portions, I ate 1');
   await dialog.getByRole('button', { name: 'Estimate meal' }).click();
-  await expect(dialog.getByText('Rice white boiled')).toBeVisible();
-  await expect(dialog.getByText('Rijst witte gekookt')).toBeVisible(); // Dutch name underneath
+  await expect(dialog.getByText('Rice white boiled')).toBeVisible(); // English names by default
+  await expect(dialog.getByLabel('Meal name')).toHaveValue('Chicken rice prep');
+  await expect(dialog.getByLabel('Portions it makes')).toHaveValue('4');
+  await expect(dialog.getByText('3 of 4 portions stay as leftovers', { exact: false })).toBeVisible();
 
-  await dialog.getByRole('button', { name: 'Meal prep? Save as recipe' }).click();
-  await dialog.getByLabel('Recipe name').fill('Chicken rice prep');
-  await dialog.getByLabel('Servings in total').fill('4');
-  await dialog.getByRole('button', { name: 'Save recipe and log 1 serving' }).click();
+  await dialog.getByRole('button', { name: 'Save meal prep and log 1 portion' }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole('button', { name: 'Edit Chicken rice prep' })).toBeVisible();
-  await expect(page.getByText('1 serving')).toBeVisible();
+  await expect(page.getByText('1 portion', { exact: false }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Edit Rijst witte gekookt' })).toBeHidden();
+
+  // Next meal: the leftovers are one tap away.
+  await page.getByRole('button', { name: 'Add food' }).first().click();
+  const sheet = page.getByRole('dialog');
+  const leftovers = sheet.getByRole('region', { name: 'Leftovers' });
+  await expect(leftovers.getByText('3 of 4 portions left', { exact: false })).toBeVisible();
+  await leftovers.getByRole('button', { name: 'Log 1 portion of Chicken rice prep' }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Edit Chicken rice prep' })).toHaveCount(2);
+
+  await page.goto('/recipes?view=preps');
+  await expect(page.getByText('2 left')).toBeVisible();
+});
+
+test('More is grouped and searchable, purple accent applies, weigh-in line toggles', async ({ page }) => {
+  await seed(page, 14);
+  await page.goto('/more');
+  await expect(page.getByRole('region', { name: 'Nutrition' }).getByRole('link', { name: 'Meal preps and leftovers' })).toBeVisible();
+  await page.getByLabel('Find a page or setting').fill('api key');
+  await expect(page.getByRole('link', { name: 'AI and voice' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Weight log' })).toBeHidden();
+  await page.getByRole('link', { name: 'AI and voice' }).click();
+  await expect(page).toHaveURL(/\/settings#ai$/);
+
+  await page.getByRole('button', { name: 'Purple' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-accent', 'purple');
+
+  await page.goto('/weight');
+  const toggle = page.getByLabel('Show weigh-in line');
+  await expect(toggle).not.toBeChecked();
+  await toggle.check();
+  await page.reload();
+  await expect(page.getByLabel('Show weigh-in line')).toBeChecked();
+});
+
+test('groups a meal logged as separate items into one row', async ({ page }) => {
+  await seed(page, 2);
+  await page.evaluate(async () => {
+    const load = (p: string) => import(/* @vite-ignore */ p);
+    const { addLogEntry } = await load('/src/lib/log/actions.ts');
+    const { toDateKey } = await load('/src/lib/utils/date.ts');
+    const food = (id: string, name: string, kcal: number) => ({ id, source: 'nevo', name, nameEn: name, per100: { kcal, protein: 10, carbs: 10, fat: 1 }, servings: [] });
+    await addLogEntry({ date: toDateKey(), meal: 0, food: food('nevo:1', 'Potato mash', 90), grams: 250 });
+    await addLogEntry({ date: toDateKey(), meal: 0, food: food('nevo:2', 'Skyr', 60), grams: 150 });
+  });
+  await page.goto('/log');
+  await page.getByRole('button', { name: 'Breakfast options' }).click();
+  await page.getByRole('menuitem', { name: 'Group as one item' }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByLabel('Name').fill('Protein mash');
+  await sheet.getByRole('button', { name: 'Group' }).click();
+  await expect(sheet).toBeHidden();
+  const row = page.getByRole('button', { name: 'Protein mash, 2 items' });
+  await expect(row).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit Skyr' })).toBeHidden();
+  await row.click();
+  await expect(page.getByRole('button', { name: 'Edit Skyr' })).toBeVisible();
 });
 
 test('turns an already logged meal prep into a recipe from the meal menu', async ({ page }) => {

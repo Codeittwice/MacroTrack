@@ -52,6 +52,22 @@ export interface ExpenditureInput {
   windowDays?: number;
   /** days elapsed since `previous` was computed; scales the ±100 kcal / 7 d change cap (default 7) */
   daysSincePrevious?: number;
+  /**
+   * Raw weigh-ins. When given, the weight change comes from a least-squares line through these
+   * (outliers removed) instead of through the smoothed trend, which lags real changes by ~10 days.
+   */
+  weights?: { date: DateKey; kg: number }[];
 }
-export interface ExpenditureResult { expenditure: number; confidence: 'low' | 'medium' | 'high'; daysUsed: number }
+export interface ExpenditureResult {
+  expenditure: number;
+  confidence: 'low' | 'medium' | 'high';
+  daysUsed: number;
+  /** logged days left out because they look partly logged (under half the estimate) */
+  excludedDays?: number;
+  /** what the weight change came from: raw weigh-ins or the smoothed trend */
+  slopeSource?: 'weighins' | 'trend';
+  /** average logged intake and weight change over the days used (for explaining the estimate) */
+  avgIntake?: number;
+  kgPerWeek?: number;
+}
 export type EstimateExpenditureFn = (i: ExpenditureInput) => ExpenditureResult;

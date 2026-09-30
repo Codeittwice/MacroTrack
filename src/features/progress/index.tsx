@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Card, EmptyState, PageHeader, ProgressBar, Segmented, Stat } from '@/components/ui';
-import { TrendChart, rangeStart, type TrendRange } from '@/components/charts/TrendChart';
+import { RawLineToggle, TrendChart, rangeStart, useRawLinePref, type TrendRange } from '@/components/charts/TrendChart';
 import { getTargetSetFor, useProfile, useSettings, useTargets } from '@/app/hooks';
 import { db } from '@/db/schema';
 import { alive } from '@/db/repo';
@@ -44,6 +44,7 @@ export default function ProgressPage() {
   const targetSet = useLiveQuery(() => getTargetSetFor(date), [date]);
   const measurements = useLiveQuery(async () => (await db.measurements.orderBy('date').toArray()).filter(alive), []);
   const [range, setRange] = useState<TrendRange>('3M');
+  const [rawLine, setRawLine] = useRawLinePref();
   const [nutrient, setNutrient] = useState<NutrientKey>('kcal');
   const [macroDays, setMacroDays] = useState<7 | 28>(7);
   const intake = useLiveQuery(
@@ -58,11 +59,11 @@ export default function ProgressPage() {
   const energy = useMemo(() => {
     if (!profile || !intake || !trend || trend.trend.length === 0) return [];
     const prior = targetsFromProfile(profile, trend.trend[0].value, ageOn(profile.birthDate, trend.trend[0].date)).tdee;
-    const series = expenditureSeries(intake, trend.trend, prior);
+    const series = expenditureSeries(intake, trend.trend, prior, { weights: weights?.map((w) => ({ date: w.date, kg: w.kg })) });
     const byDate = new Map(intake.map((d) => [d.date, d.kcal]));
     const keep = inRange(range, date);
     return series.filter((p) => keep(p.date)).map((p) => ({ date: p.date, expenditure: p.value, intake: byDate.get(p.date) }));
-  }, [profile, intake, trend, range, date]);
+  }, [profile, intake, trend, range, date, weights]);
 
   const nutrientData = useMemo(() => {
     if (!intake) return [];
@@ -131,7 +132,8 @@ export default function ProgressPage() {
 
       <Card>
         <div className="mb-3 flex items-start justify-between gap-3"><div><div className="font-semibold">Weight trend</div><div className="text-sm text-muted">Scale readings and smoothed trend</div></div><Link to="/weight" className="shrink-0 text-sm text-primary hover:underline">Weight log</Link></div>
-        <TrendChart weights={weights.map((w) => ({ date: w.date, kg: w.kg }))} trend={trend?.trend ?? []} range={range} unit={unit} goalKg={goalKg} />
+        <TrendChart weights={weights.map((w) => ({ date: w.date, kg: w.kg }))} trend={trend?.trend ?? []} range={range} unit={unit} goalKg={goalKg} showRawLine={rawLine} />
+        <RawLineToggle on={rawLine} onChange={setRawLine} />
       </Card>
 
       {goalKg !== undefined && (

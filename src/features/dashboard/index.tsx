@@ -1,5 +1,6 @@
 import { SupplementChecklist } from '@/features/supplements/SupplementChecklist';
 import { TrainingTile } from './TrainingTile';
+import { LeftoversStrip } from '@/features/addfood/Leftovers';
 import { useMemo } from 'react';
 import { CheckInBanner } from './CheckInBanner';
 import { HeroCard } from './HeroCard';
@@ -65,6 +66,7 @@ export default function DashboardPage() {
         <HeroCard totals={data.dayTotals} targets={data.targets} />
         {data.targets?.exerciseKcal ? <p className="-mt-2 px-1 text-xs text-muted">Includes +{data.targets.exerciseKcal} kcal from today's training.</p> : null}
         <QuickActions meal={meal} />
+        <LeftoversStrip date={data.today} meal={meal} onLogged={() => undefined} className="" />
         <TodayMeals mealNames={settings.mealNames} entries={data.dayEntries} />
       </div>
 

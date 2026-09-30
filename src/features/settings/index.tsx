@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { PageHeader } from '@/components/ui';
 import { useProfile } from '@/app/hooks';
 import { ProfileSection } from './ProfileSection';
@@ -15,6 +17,13 @@ import { DangerZone } from './DangerZone';
 
 export default function SettingsPage() {
   const profile = useProfile();
+  const { hash } = useLocation();
+
+  // Deep links from More (e.g. /settings#ai) scroll to that section once it has rendered.
+  useEffect(() => {
+    if (!hash || profile === undefined) return;
+    document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' });
+  }, [hash, profile]);
 
   return (
     <div className="mx-auto max-w-2xl pb-24">

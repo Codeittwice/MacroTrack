@@ -10,7 +10,7 @@ const FOOD: FoodItem = {
 };
 
 beforeEach(async () => {
-  await Promise.all([db.recipes.clear(), db.savedMeals.clear(), db.logEntries.clear()]);
+  await Promise.all([db.recipes.clear(), db.savedMeals.clear(), db.logEntries.clear(), db.batches.clear()]);
 });
 
 describe('recipes', () => {
@@ -76,8 +76,12 @@ describe('meal prep as recipe', () => {
     expect(recipe.ingredients[0].food.nameEn).toBe('Rice white boiled');
     const left = (await db.logEntries.toArray()).filter(alive);
     expect(left).toHaveLength(1);
-    expect(left[0]).toMatchObject({ name: 'Chicken rice prep', source: 'recipe', grams: 300, servingLabel: '1 serving' });
+    expect(left[0]).toMatchObject({ name: 'Chicken rice prep', source: 'recipe', grams: 300, servingLabel: '1 portion' });
     expect(left[0].nutrients.kcal).toBeCloseTo((1040 + 600) / 4);
+    // The three portions not eaten yet are leftovers.
+    const [batch] = await db.batches.toArray();
+    expect(batch).toMatchObject({ recipeId: recipe.id, portions: 4, yieldGrams: 1200 });
+    expect(left[0].batchId).toBe(batch.id);
   });
 
   it('can save without touching the log, or remove it entirely', async () => {

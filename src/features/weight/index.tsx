@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Plus, Scale } from 'lucide-react';
 import { Button, Card, EmptyState, PageHeader, Segmented } from '@/components/ui';
-import { TrendChart, type TrendRange } from '@/components/charts/TrendChart';
+import { RawLineToggle, TrendChart, useRawLinePref, type TrendRange } from '@/components/charts/TrendChart';
 import { useWeights, summarizeTrend } from '@/lib/weight/queries';
 import { useProfile, useSettings } from '@/app/hooks';
 import type { WeightEntry } from '@/db/types';
@@ -47,6 +47,7 @@ export default function WeightPage() {
   const unit = settings.weightUnit;
 
   const [range, setRange] = useState<TrendRange>(loadRange);
+  const [rawLine, setRawLine] = useRawLinePref();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<WeightEntry | undefined>(undefined);
 
@@ -133,7 +134,9 @@ export default function WeightPage() {
               range={range}
               unit={unit}
               goalKg={profile?.goalWeightKg}
+              showRawLine={rawLine}
             />
+            <RawLineToggle on={rawLine} onChange={setRawLine} />
           </Card>
 
           <div className="mb-6">

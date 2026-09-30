@@ -27,7 +27,7 @@ describe('estimateMeal', () => {
     await expect(estimateMeal({ provider: 'claude', apiKey: '', description: 'Lunch' })).rejects.toThrow('Add an API key');
     await expect(estimateMeal({ provider: 'claude', apiKey: 'private-key', description: '' })).rejects.toThrow('Describe the meal or add a photo');
     await expect(estimateMeal({ provider: 'claude', apiKey: 'private-key', description: 'Lunch' }, async () => response({}, 401))).rejects.not.toThrow('private-key');
-    await expect(estimateMeal({ provider: 'claude', apiKey: 'key', description: 'x'.repeat(2_001) })).rejects.toThrow('under 2,000');
+    await expect(estimateMeal({ provider: 'claude', apiKey: 'key', description: 'x'.repeat(4_001) })).rejects.toThrow('under 4,000');
   });
 });
 

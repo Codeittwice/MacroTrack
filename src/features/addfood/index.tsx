@@ -18,16 +18,18 @@ import { fmtG, fmtKcal } from './format';
 import { useAddFoodTabs } from './registry';
 import { BarcodeTab } from './BarcodeTab';
 import { AiEstimateTab } from './AiEstimateTab';
+import { LeftoversStrip } from './Leftovers';
 import { readNutritionLabel, type LabelReading } from '@/lib/ai';
 import { prepareMealPhoto } from './mealPhoto';
 import { FoodName } from '@/components/FoodName';
 
-type BuiltInTab = 'search' | 'library' | 'barcode' | 'ai' | 'quick' | 'new';
+type BuiltInTab = 'search' | 'library' | 'photo' | 'barcode' | 'ai' | 'quick' | 'new';
 type SheetTab = BuiltInTab | string;
 
 const BUILT_IN_TABS: { id: BuiltInTab; label: string }[] = [
   { id: 'search', label: 'Search' },
   { id: 'library', label: 'Library' },
+  { id: 'photo', label: 'Photo' },
   { id: 'barcode', label: 'Barcode' },
   { id: 'ai', label: 'Describe meal' },
   { id: 'quick', label: 'Quick add' },
@@ -192,7 +194,7 @@ function SearchTab({ onSelect }: { onSelect: (food: FoodItem) => void }) {
       {results === undefined && <div className="py-8 text-center text-sm text-muted">Searching…</div>}
       {results?.length === 0 && (query.trim()
         ? <div className="py-8 text-center text-sm text-muted">No foods found. Try other words, scan the barcode, or create a food.</div>
-        : <div className="py-8 text-center text-sm text-muted">Search Dutch foods and supermarket products, e.g. <span className="text-text">AH turks brood</span> or <span className="text-text">kwark</span>.</div>)}
+        : <div className="py-8 text-center text-sm text-muted">Search foods and supermarket products, e.g. <span className="text-text">chicken breast</span>, <span className="text-text">skyr</span> or <span className="text-text">AH turks brood</span>.</div>)}
       {results && results.length > 0 && <div className="divide-y divide-border">{results.map((food) => <FoodRow key={food.id} food={food} onSelect={onSelect} />)}</div>}
       {results?.some((food) => food.source === 'nevo') && <p className="pt-3 text-center text-[11px] text-muted">{nevoCredit()}</p>}
       {results !== undefined && query.trim().length >= 3 && offSearchStatus() !== 'ok' && (
@@ -381,10 +383,12 @@ export function AddFoodSheet({ open, onClose, date, meal, initialTab }: {
   ) : (
     <>
       <Segmented options={availableTabs.map((candidate) => ({ value: candidate.id, label: candidate.label }))} value={tab} onChange={setTab} className="no-scrollbar mb-4 overflow-x-auto" />
+      {(tab === 'search' || tab === 'library') && <LeftoversStrip date={date} meal={meal} onLogged={logged} />}
       {tab === 'search' && <SearchTab onSelect={setSelectedFood} />}
       {tab === 'library' && <LibraryTab date={date} meal={meal} onLogged={logged} onSelect={setSelectedFood} />}
       {tab === 'barcode' && <BarcodeTab onSelect={setSelectedFood} />}
-      {tab === 'ai' && <AiEstimateTab date={date} meal={meal} onLogged={logged} />}
+      {tab === 'photo' && <AiEstimateTab key="photo" mode="photo" date={date} meal={meal} onLogged={logged} />}
+      {tab === 'ai' && <AiEstimateTab key="ai" date={date} meal={meal} onLogged={logged} />}
       {tab === 'quick' && <QuickAddTab date={date} meal={meal} onLogged={logged} />}
       {tab === 'new' && <NewFoodTab onSelect={setSelectedFood} />}
       {extensions.filter((candidate) => candidate.id === tab).map((candidate) => <div key={candidate.id}>{candidate.render({ date, meal, onLogged: logged, openFood: setSelectedFood })}</div>)}

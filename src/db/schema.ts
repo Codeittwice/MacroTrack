@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type {
-  CheckIn, CustomExercise, DayNote, Supplement, SupplementLog, Workout, WorkoutTemplate, LogEntry, Measurement, Profile, ProgressPhoto, Recipe, SavedMeal,
+  Batch, CheckIn, CustomExercise, DayNote, Supplement, SupplementLog, Workout, WorkoutTemplate, LogEntry, Measurement, Profile, ProgressPhoto, Recipe, SavedMeal,
   Settings, StoredFood, TargetSet, WaterEntry, WeightEntry,
 } from './types';
 
@@ -24,6 +24,7 @@ export class MacroDB extends Dexie {
   workoutTemplates!: EntityTable<WorkoutTemplate, 'id'>;
   supplements!: EntityTable<Supplement, 'id'>;
   supplementLogs!: EntityTable<SupplementLog, 'id'>;
+  batches!: EntityTable<Batch, 'id'>;
 
   constructor(name = 'macrotrack') {
     super(name);
@@ -49,6 +50,11 @@ export class MacroDB extends Dexie {
       workoutTemplates: 'id, name, updatedAt',
       supplements: 'id, name, updatedAt',
       supplementLogs: 'id, date, supplementId, updatedAt',
+    });
+    // v3: meal-prep batches; log entries indexed by batch.
+    this.version(3).stores({
+      batches: 'id, recipeId, cookedOn, updatedAt',
+      logEntries: 'id, date, [date+meal], foodId, loggedAt, updatedAt, batchId',
     });
   }
 }

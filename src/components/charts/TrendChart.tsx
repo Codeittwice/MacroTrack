@@ -2,7 +2,7 @@
  * Reusable weight trend chart (raw weigh-ins as dots + smoothed trend line + optional goal line).
  * Shared by the Weight page and the Progress page.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import {
   ResponsiveContainer,
@@ -21,6 +21,37 @@ import { addDays, fromDateKey, today } from '@/lib/utils/date';
 
 export type TrendRange = '7D' | '1M' | '3M' | '6M' | '1Y' | 'ALL';
 
+const RAW_LINE_KEY = 'weight.rawLine';
+
+/** Remembered per device: whether the weigh-ins are joined by a line under the trend. */
+export function useRawLinePref(): [boolean, (on: boolean) => void] {
+  const [on, setOn] = useState(() => {
+    try {
+      return localStorage.getItem(RAW_LINE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const set = (next: boolean) => {
+    setOn(next);
+    try {
+      localStorage.setItem(RAW_LINE_KEY, next ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  };
+  return [on, set];
+}
+
+export function RawLineToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <label className="mt-2 flex items-center gap-2 text-xs text-muted">
+      <input type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked)} className="accent-[var(--primary)]" />
+      Show weigh-in line
+    </label>
+  );
+}
+
 export interface TrendChartProps {
   weights: { date: DateKey; kg: number }[];
   trend: DailyPoint[];
@@ -28,6 +59,8 @@ export interface TrendChartProps {
   unit: 'kg' | 'lb';
   goalKg?: number;
   height?: number;
+  /** Connect the weigh-ins point to point (drawn thin, under the trend line). */
+  showRawLine?: boolean;
 }
 
 const RANGE_DAYS: Record<Exclude<TrendRange, 'ALL'>, number> = {
@@ -114,7 +147,7 @@ function ChartTooltip({
 }
 
 export function TrendChart(props: TrendChartProps) {
-  const { weights, trend, range, unit, goalKg, height = 240 } = props;
+  const { weights, trend, range, unit, goalKg, height = 240, showRawLine = false } = props;
 
   const { data, yDomain } = useMemo(() => {
     const allDates = [...weights.map((w) => w.date), ...trend.map((t) => t.date)];
@@ -230,7 +263,10 @@ export function TrendChart(props: TrendChartProps) {
         <Line
           type="monotone"
           dataKey="scale"
-          stroke="none"
+          stroke={showRawLine ? 'var(--muted)' : 'none'}
+          strokeWidth={1}
+          strokeOpacity={0.6}
+          connectNulls
           dot={{ r: 2.5, fill: 'var(--muted)', fillOpacity: 0.5, stroke: 'none' }}
           activeDot={{ r: 3, fill: 'var(--muted)', stroke: 'none' }}
           isAnimationActive={false}

@@ -78,7 +78,7 @@ export interface Profile extends Syncable {
 }
 
 export type ThemeMode = 'dark' | 'light' | 'system';
-export type Accent = 'green' | 'ocean' | 'sunset';
+export type Accent = 'green' | 'ocean' | 'sunset' | 'purple';
 export type AiProviderId = 'claude' | 'openai' | 'gemini';
 
 export interface Settings {
@@ -109,11 +109,22 @@ export interface Settings {
   productRegion: 'nl' | 'bg' | 'both';
   /** How food names are shown: English, Dutch (as published), or English with the Dutch name underneath. */
   foodNames: 'en' | 'nl' | 'both';
+  /** Set once the user picks a food-name language themselves (see withDefaults in repo.ts). */
+  foodNamesChosen?: boolean;
   /** Speech recognition language for describing meals by voice ('auto' = device language). */
   voiceLanguage: 'auto' | 'en-US' | 'nl-NL' | 'bg-BG';
   /** Notification on the profile's weekly check-in day. */
   checkInReminderEnabled: boolean;
   checkInReminderTime: string;
+  /** Training-day notification on the chosen weekdays (0 = Sunday). */
+  trainingReminderEnabled?: boolean;
+  trainingReminderTime?: string;
+  trainingDays?: number[];
+  /** Per-meal nudge (by meal index) that only fires when that meal has nothing logged yet. */
+  mealNudgesEnabled?: boolean;
+  mealNudgeTimes?: string[];
+  /** Warn about meal preps cooked a few days ago that still have portions left. */
+  leftoverReminderEnabled?: boolean;
   syncEnabled: boolean;
   updatedAt: number;
 }
@@ -147,6 +158,21 @@ export interface SavedMeal extends Syncable {
   items: { food: FoodItem; grams: number }[];
 }
 
+/**
+ * One cooked pot of a recipe (a meal prep). What's left is derived from the alive log entries that
+ * carry this `batchId`, so editing or deleting an entry puts the food back automatically.
+ */
+export interface Batch extends Syncable {
+  recipeId: string;
+  name: string;
+  cookedOn: DateKey;
+  portions: number;
+  /** total cooked weight of this pot */
+  yieldGrams: number;
+  /** set when the user marks the rest eaten or thrown away */
+  finishedAt?: number;
+}
+
 export interface LogEntry extends Syncable {
   date: DateKey;
   /** index into Settings.mealNames */
@@ -165,6 +191,11 @@ export interface LogEntry extends Syncable {
   /** Snapshot of per-100 values, used when editing grams. */
   per100?: Nutrients;
   loggedAt: number;
+  /** Portion taken from a cooked batch (meal prep). */
+  batchId?: string;
+  /** Entries logged together from a saved meal share a group, shown as one row. */
+  groupId?: string;
+  groupName?: string;
 }
 
 /** Custom / cached foods (user-created, OFF cache, AI-saved). `id` equals the FoodItem id. */

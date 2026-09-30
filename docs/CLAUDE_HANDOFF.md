@@ -2,7 +2,7 @@
 
 Branch: `main` on github.com/Codeittwice/MacroTrack. Read this file, then `git log`, before starting.
 
-## Status (updated 2026-09-29, Codex)
+## Status (updated 2026-09-29, Codex; Wave 9 from 2026-09-30 is below)
 
 All plan waves are implemented. The app works as a browser PWA, as an Android APK (Capacitor 7) and as a Windows desktop app (Tauri 2).
 
@@ -69,6 +69,23 @@ Plan:
   - unit: Cyrillic detection plus the translation call (mock `fetch`), and OFF region parameters
   - e2e: speech isn't available headless, so stub the speech helper and assert the translated text appears
   - Android: the permission prompt and recognition on the emulator (host mic)
+
+## Wave 9 (2026-09-30, Claude): user feedback round, 16 items
+Plan: `C:\Users\20243446\.claude\plans\so-now-for-new-velvety-summit.md`. Waves A, B, D and E are done; **Wave C (dashboard and food-log redesign) waits for the user to approve the mockups**. The More tab from Wave C is done. Not committed yet.
+- **Back button (Android):** `src/app/backStack.ts` + `@capacitor/app`. `Sheet` registers itself; back closes the top sheet, otherwise `history.back()`, and on `/` a second press within 2 s exits. Unit tested, **not yet tried on a device**.
+- **Photo tab** in Add food (`AiEstimateTab mode="photo"`), a Photo quick action on the dashboard, and step-by-step progress while estimating.
+- **Barcode indicator:** scan frame with a sweeping line, then primary once a code is read (with vibration), green "Found: …", or a clear "not in the database" message.
+- **Food names default to English** (`foodNames: 'en'`). `withDefaults()` in `repo.ts` reads an old default 'both' as 'en' unless `foodNamesChosen` is set.
+- **Voice fixes** (`speech.ts`): Android/Chrome end a session at the first pause, so it now restarts until Stop and joins the segments; "No match"/`no-speech` count as silence, not errors; `onFinal` appends to the current text (it used a stale closure). **Real speech still to be tried on the phone.**
+- **Purple accent** (calories switch to teal under purple so they stay distinct). **Weigh-in line** toggle on the Weight/Progress trend chart (`useRawLinePref`, localStorage).
+- **Meal prep / batches (schema v3):** `Batch` table + `LogEntry.batchId`. What's left is derived from alive entries, never stored, so edits/deletes put food back (`src/lib/batches/actions.ts`). The describe flow takes a long description (`Textarea`); the AI returns `dishName`, `portions`, `cookedGrams`; review has editable grams and macros (pencil), per-portion totals, and "Save meal prep and log N portions". Leftovers strip on Add food (Search/Library) and the dashboard; Recipes → Meal preps tab (`?view=preps`). The meal ⋮ "Save as recipe" with >1 serving now also creates a batch.
+- **Grouped meals:** `LogEntry.groupId/groupName`. Saved meals log as one group; meal ⋮ → "Group as one item"; `GroupRow` expands to show the items. Copying a meal gives the copy a new group id.
+- **More tab:** sections (Body, Nutrition, Training and habits, Data, App) plus search; Settings sections have anchors (`sectionId`), so e.g. `/settings#ai` scrolls there.
+- **Training volume:** per-muscle landmarks (MEV / optimal range / MRV) in `volume.ts`, bands on the map (under, building, optimal, high, too much), a muscle sheet with a range bar and an 8-week chart, and a Weekly volume table (last 7 days vs the week before vs the 4-week average; rolling 7-day blocks to match the map).
+- **Notifications:** training weekdays (ids 110–116), meal nudges that skip meals already logged (one-shot, 3 days ahead, ids 300–339), leftovers 3 days after cooking (ids 400–419). `ReminderSync` reschedules when today's log or leftovers change; the Reminders section only asks for permission now.
+- **Expenditure audit:** the EMA trend slope was biased low early on (simulated true 2600: 2311 at 14 d, 2374 at 21 d). The weight change now comes from a least-squares line through the raw outlier-filtered weigh-ins (2496 / 2537). Days under 50% of the anchor are skipped as partly logged. `accuracy.test.ts` guards this. Coach → "How is this calculated?" explains it with the user's numbers.
+- Verified: build, 360 unit tests (49 files), 36 e2e (`--workers=1`), `release/MacroTrack-android-debug.apk` rebuilt. No emulator was running, so nothing has been checked on a device.
+- Gotcha: never round-trip files through PowerShell `Get-Content -Raw` (it double-encoded UTF-8 in 6 files; fixed).
 
 ## Fixes 2026-09-29 (afternoon, Claude)
 - **Android keyboard covering fields (real cause):** with targetSdk 35 the app is edge-to-edge, where `adjustResize` no longer shrinks the window, and Capacitor's `adjustMarginsForEdgeToEdge` listener only reserves the system bars. `MainActivity.java` now replaces that listener and sets the WebView's bottom margin to max(system bars, IME). Verified on the emulator: innerHeight 839 → 527 with the keyboard open, back to 839 when closed; the weight sheet's Note field and Save stay visible.

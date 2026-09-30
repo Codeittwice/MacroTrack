@@ -8,6 +8,7 @@ import { alive } from '@/db/repo';
 import { prepareCheckIn, saveCheckIn } from '@/lib/coach/actions';
 import { today } from '@/lib/utils/date';
 import { toDisplay } from '@/lib/weight/actions';
+import { HowCalculated } from './HowCalculated';
 
 const confidenceColor = { low: 'var(--warning)', medium: 'var(--primary)', high: 'var(--protein)' };
 
@@ -46,6 +47,7 @@ export default function CoachPage() {
     <Card className="border border-primary/25 bg-primary/10"><div className="mb-4 flex items-start justify-between gap-3"><div><div className="font-semibold">Weekly check-in</div><div className="text-sm text-muted">{checkIn ? (checkIn.accepted ? 'Accepted today' : 'Reviewed today') : 'Review today\'s trend and targets'}</div></div><span className="rounded px-2 py-1 text-xs font-medium" style={{ color: confidenceColor[proposal.confidence], background: `${confidenceColor[proposal.confidence]}1f` }}>{proposal.confidence} confidence</span></div>
       <div className="grid grid-cols-3 gap-3"><Stat label="Trend weight" value={`${displayedWeight.toFixed(1)} ${settings.weightUnit}`} /><Stat label="Weekly rate" value={`${proposal.weeklyRateKg > 0 ? '+' : ''}${proposal.weeklyRateKg.toFixed(2)} kg`} /><Stat label="Expenditure" value={`${proposal.expenditure} kcal`} /></div>
       {proposal.staleDays > 0 && <div className="mt-4 text-sm text-warning">Your latest weigh-in is {proposal.staleDays} days old, so this proposal is less certain.</div>}
+      <div className="mt-3"><HowCalculated proposal={proposal} /></div>
     </Card>
 
     <Card><div className="mb-3 font-semibold">Proposed daily targets</div><div className="grid grid-cols-4 gap-2 text-center"><div className="text-kcal">{macroLabel(proposal.proposed.kcal, 'kcal')}</div><div className="text-protein">{macroLabel(proposal.proposed.protein, 'P')}</div><div className="text-carbs">{macroLabel(proposal.proposed.carbs, 'C')}</div><div className="text-fat">{macroLabel(proposal.proposed.fat, 'F')}</div></div></Card>

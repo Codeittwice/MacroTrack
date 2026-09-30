@@ -29,10 +29,10 @@ const VISION_MODELS: Record<AiProviderId, string> = {
   openai: 'gpt-4.1-mini',
   gemini: 'gemini-2.5-flash',
 };
-const MAX_DESCRIPTION_LENGTH = 2_000;
+const MAX_DESCRIPTION_LENGTH = 4_000;
 const MAX_IMAGE_BASE64 = 4_500_000; // ~3.3 MB decoded; the UI downsizes well below this
 
-const OUTPUT_INSTRUCTIONS = `Return JSON only, with this shape: {"items":[{"name":string,"grams":number,"nutrients":{"kcal":number,"protein":number,"carbs":number,"fat":number},"confidence":number,"foodQuery":string?}]}. Identify each food separately. grams and nutrients describe the eaten portion. confidence is 0 to 1. The user is in the Netherlands: recognise Dutch dishes and supermarket products (Albert Heijn, Jumbo, Lidl, Aldi, Plus) and use typical Dutch portion sizes (a slice of bread is about 35 g, a Turks brood portion about 90 g). Set foodQuery to a short Dutch generic food name as used in the Dutch food composition table (NEVO), e.g. "Brood Turks", "Kipfilet bereid", "Rijst witte gekookt", so the item can be matched to reference data. Estimate cooked weights for cooked foods and list cooking fat and sauces as separate items. Do not provide medical advice.`;
+const OUTPUT_INSTRUCTIONS = `Return JSON only, with this shape: {"dishName":string,"portions":number?,"cookedGrams":number?,"items":[{"name":string,"grams":number,"nutrients":{"kcal":number,"protein":number,"carbs":number,"fat":number},"confidence":number,"foodQuery":string?}]}. dishName is a short name for the meal, e.g. "Protein mash". Identify each food separately. grams and nutrients describe the eaten portion. If the user describes cooking a batch or meal prep (e.g. "I made a pot that serves 4"), list every ingredient of the WHOLE batch with its full amount instead, set portions to the number of portions the batch serves, and set cookedGrams only if the user states the cooked weight. Omit portions for a single meal. confidence is 0 to 1. The user is in the Netherlands: recognise Dutch dishes and supermarket products (Albert Heijn, Jumbo, Lidl, Aldi, Plus) and use typical Dutch portion sizes (a slice of bread is about 35 g, a Turks brood portion about 90 g). Set foodQuery to a short Dutch generic food name as used in the Dutch food composition table (NEVO), e.g. "Brood Turks", "Kipfilet bereid", "Rijst witte gekookt", so the item can be matched to reference data. Estimate cooked weights for cooked foods and list cooking fat and sauces as separate items. Do not provide medical advice.`;
 
 function parseJson(text: string): AiMealEstimate {
   const trimmed = stripJsonFence(text);
@@ -130,7 +130,7 @@ export async function estimateMeal(input: EstimateMealInput, fetcher: Fetcher = 
   const apiKey = input.apiKey.trim();
   if (!description && !input.image) throw new Error('Describe the meal or add a photo before estimating it.');
   validateImage(input.image);
-  if (description.length > MAX_DESCRIPTION_LENGTH) throw new Error('Keep the meal description under 2,000 characters.');
+  if (description.length > MAX_DESCRIPTION_LENGTH) throw new Error('Keep the meal description under 4,000 characters.');
   if (!apiKey) throw new Error('Add an API key for the selected provider in Settings.');
   const userText = input.image
     ? `Estimate the meal in this photo.${description ? ` Extra context from the user: ${description}` : ''}`

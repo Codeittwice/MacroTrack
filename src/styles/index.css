@@ -38,3 +38,10 @@ body {
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 }
+
+/* Barcode scanner: a line sweeping the scan frame. */
+@keyframes scan-sweep {
+  0%, 100% { top: 8%; }
+  50% { top: 88%; }
+}
+.scan-line { animation: scan-sweep 1.8s ease-in-out infinite; }

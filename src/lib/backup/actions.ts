@@ -3,10 +3,10 @@ import { DEFAULT_SETTINGS } from '@/db/repo';
 import type { Table } from 'dexie';
 
 const BACKUP_VERSION = 1;
-const TABLES = ['profile', 'settings', 'weights', 'measurements', 'foods', 'recipes', 'savedMeals', 'logEntries', 'targets', 'checkins', 'water', 'notes', 'exercises', 'workouts', 'workoutTemplates', 'supplements', 'supplementLogs'] as const;
+const TABLES = ['profile', 'settings', 'weights', 'measurements', 'foods', 'recipes', 'savedMeals', 'logEntries', 'targets', 'checkins', 'water', 'notes', 'exercises', 'workouts', 'workoutTemplates', 'supplements', 'supplementLogs', 'batches'] as const;
 type TableName = typeof TABLES[number];
-/** Added in schema v2; backups made before that simply don't have them. */
-const OPTIONAL_TABLES: readonly TableName[] = ['exercises', 'workouts', 'workoutTemplates', 'supplements', 'supplementLogs'];
+/** Added in schema v2/v3; backups made before that simply don't have them. */
+const OPTIONAL_TABLES: readonly TableName[] = ['exercises', 'workouts', 'workoutTemplates', 'supplements', 'supplementLogs', 'batches'];
 
 export interface BackupFile {
   version: number;
@@ -32,6 +32,7 @@ const ROW_OK: Partial<Record<TableName, (r: Record<string, unknown>) => boolean>
   exercises: (r) => typeof r.name === 'string' && Array.isArray(r.primary),
   supplements: (r) => typeof r.name === 'string' && finite(r.dose),
   supplementLogs: (r) => isDate(r.date) && typeof r.supplementId === 'string',
+  batches: (r) => isDate(r.cookedOn) && typeof r.recipeId === 'string' && finite(r.yieldGrams) && finite(r.portions),
 };
 
 function isBackup(value: unknown): value is BackupFile {

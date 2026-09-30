@@ -52,7 +52,7 @@ test('onboards a new user, logs a quick meal, and updates the dashboard', async 
 test('exports and restores a backup through the UI', async ({ page }) => {
   await completeOnboarding(page);
   await page.getByRole('link', { name: 'More' }).click();
-  await page.getByRole('link', { name: 'Export, import and backup' }).click();
+  await page.getByRole('link', { name: 'Backup and restore' }).click();
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download backup' }).click();

@@ -20,7 +20,7 @@ export const DEFAULT_SETTINGS: Settings = {
   logReminderTime: '21:00',
   exerciseCalories: 'off',
   productRegion: 'nl',
-  foodNames: 'both',
+  foodNames: 'en',
   voiceLanguage: 'auto',
   checkInReminderEnabled: false,
   checkInReminderTime: '09:00',
@@ -28,8 +28,18 @@ export const DEFAULT_SETTINGS: Settings = {
   updatedAt: 0,
 };
 
+/**
+ * Stored settings merged over the defaults. Food names defaulted to 'both' until 2026-09-30; a
+ * stored 'both' the user never picked themselves (no foodNamesChosen) now reads as English.
+ */
+export function withDefaults(stored: Partial<Settings> | undefined): Settings {
+  const s = { ...DEFAULT_SETTINGS, ...stored };
+  if (s.foodNames === 'both' && !s.foodNamesChosen) s.foodNames = 'en';
+  return s;
+}
+
 export async function getSettings(): Promise<Settings> {
-  return { ...DEFAULT_SETTINGS, ...(await db.settings.get('settings')) };
+  return withDefaults(await db.settings.get('settings'));
 }
 
 export async function updateSettings(patch: Partial<Settings>): Promise<void> {

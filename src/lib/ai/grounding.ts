@@ -19,7 +19,13 @@ export const aiEstimateItemSchema = z.object({
 });
 
 export const aiMealEstimateSchema = z.object({
-  items: z.array(aiEstimateItemSchema).min(1).max(20),
+  items: z.array(aiEstimateItemSchema).min(1).max(30),
+  /** Short name of the dish, e.g. "Protein mash". */
+  dishName: z.string().trim().min(1).max(80).optional().catch(undefined),
+  /** Set when the description is a cooked batch: how many portions the whole pot serves. */
+  portions: z.number().finite().positive().max(50).optional().catch(undefined),
+  /** Cooked weight of the whole batch, when the user gave it. */
+  cookedGrams: z.number().finite().positive().max(20000).optional().catch(undefined),
 });
 
 export type AiEstimateItem = z.infer<typeof aiEstimateItemSchema>;

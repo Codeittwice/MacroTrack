@@ -18,6 +18,7 @@
   --swatch-green: #4ADE80;
   --swatch-ocean: #38BDF8;
   --swatch-sunset: #FB923C;
+  --swatch-purple: #C084FC;
   color-scheme: dark;
 }
 :root[data-theme='light'] {
@@ -39,3 +40,6 @@
 :root[data-accent='sunset'] { --primary: #FB923C; }
 :root[data-theme='light'][data-accent='ocean'] { --primary: #0284C7; }
 :root[data-theme='light'][data-accent='sunset'] { --primary: #EA580C; }
+/* Purple accent: calories move to teal so they stay distinct from the accent. */
+:root[data-accent='purple'] { --primary: #C084FC; --kcal: #2DD4BF; }
+:root[data-theme='light'][data-accent='purple'] { --primary: #9333EA; --kcal: #0D9488; }

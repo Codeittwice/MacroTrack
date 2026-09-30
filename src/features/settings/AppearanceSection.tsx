@@ -10,6 +10,7 @@ const ACCENTS: { value: Accent; label: string; swatch: string }[] = [
   { value: 'green', label: 'Green', swatch: 'swatch-green' },
   { value: 'ocean', label: 'Ocean', swatch: 'swatch-ocean' },
   { value: 'sunset', label: 'Sunset', swatch: 'swatch-sunset' },
+  { value: 'purple', label: 'Purple', swatch: 'swatch-purple' },
 ];
 
 export function AppearanceSection() {

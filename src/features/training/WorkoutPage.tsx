@@ -135,7 +135,7 @@ function WorkoutSummary({ workout, onEdit }: { workout: Workout; onEdit: () => v
       <Card>
         <div className="mb-2 font-semibold">Muscles worked</div>
         {/* One session is roughly a third of a week's volume: scale colours so 4 sets looks well trained. */}
-        <MuscleMap sets={muscles} compact colorScale={2.5} />
+        <MuscleMap sets={muscles} compact />
       </Card>
 
       <Card>

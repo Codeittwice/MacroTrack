@@ -1,4 +1,4 @@
-import { Plus, Scale, Sparkles } from 'lucide-react';
+import { Camera, Plus, Scale, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui';
 
@@ -11,6 +11,9 @@ export function QuickActions({ meal }: { meal: number }) {
       </Button>
       <Button variant="secondary" onClick={() => navigate(`/log?add=${meal}&tab=ai`)}>
         <Sparkles size={16} /> Describe meal
+      </Button>
+      <Button variant="secondary" onClick={() => navigate(`/log?add=${meal}&tab=photo`)}>
+        <Camera size={16} /> Photo
       </Button>
       <Button variant="ghost" onClick={() => navigate('/weight?log=1')}>
         <Scale size={16} /> Log weight
