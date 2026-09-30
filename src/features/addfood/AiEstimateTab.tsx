@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Camera, Languages, Mic, Sparkles, Square, Trash2, X } from 'lucide-react';
+import { BookmarkPlus, Camera, Languages, Mic, Sparkles, Square, Trash2, X } from 'lucide-react';
 import { Button, Input, NumberInput, SourceBadge } from '@/components/ui';
 import { useSettings } from '@/app/hooks';
 import type { DateKey } from '@/db/types';
@@ -8,7 +8,10 @@ import { prepareMealPhoto } from './mealPhoto';
 import { hasCyrillic, translateToEnglish } from '@/lib/ai';
 import { resolveLang, speechMethod, startListening, type SpeechSession } from '@/lib/native/speech';
 import { addLogEntry } from '@/lib/log/actions';
+import { createRecipe, logRecipeServings } from '@/lib/recipes/actions';
+import { SaveAsRecipeForm } from '@/features/recipes/SaveAsRecipeForm';
 import { fmtKcal } from './format';
+import { FoodName } from '@/components/FoodName';
 
 type ReviewItem = GroundedEstimateItem & { key: string; grams: number };
 
@@ -26,6 +29,7 @@ export function AiEstimateTab({ date, meal, onLogged }: { date: DateKey; meal: n
   const [heard, setHeard] = useState('');
   const [original, setOriginal] = useState<string | null>(null);
   const [translating, setTranslating] = useState(false);
+  const [asRecipe, setAsRecipe] = useState(false);
   const voice = speechMethod(settings.aiProvider, apiKey);
 
   const translate = async (text: string) => {
@@ -131,7 +135,24 @@ export function AiEstimateTab({ date, meal, onLogged }: { date: DateKey; meal: n
     ))}
     {items.length === 0 && <Button variant="primary" disabled={(!description.trim() && !photo) || !apiKey || estimating} onClick={() => void estimate()}><Sparkles size={18} /> {estimating ? 'Estimating...' : 'Estimate meal'}</Button>}
     {!apiKey && <div role="status" className="text-sm text-muted">Add a {settings.aiProvider === 'claude' ? 'Claude' : settings.aiProvider === 'openai' ? 'OpenAI' : 'Gemini'} API key in Settings to estimate meals.</div>}
-    {items.length > 0 && <div className="flex flex-col gap-3"><div className="text-sm text-muted">Review the portions before adding them.</div><div className="divide-y divide-border rounded-xl bg-surface-2 px-3">{items.map((item) => <div key={item.key} className="flex items-center gap-2 py-2"><div className="min-w-0 flex-1"><div className="flex items-center gap-1.5"><span className="truncate text-sm font-medium">{item.food.name}</span><SourceBadge source={item.food.source} /></div><div className="text-xs text-muted">{item.grounded ? 'Matched to food data' : `${Math.round(item.estimate.confidence * 100)}% confidence`} · {fmtKcal(item.food.per100.kcal * item.grams / 100)} kcal</div></div><NumberInput aria-label={`${item.food.name} amount`} value={item.grams} onValue={(grams) => setItems((current) => current.map((currentItem) => currentItem.key === item.key ? { ...currentItem, grams: grams ?? 0 } : currentItem))} suffix="g" className="w-28" /><button type="button" aria-label={`Remove ${item.food.name}`} onClick={() => setItems((current) => current.filter((currentItem) => currentItem.key !== item.key))} className="rounded-lg p-2 text-muted hover:bg-surface"><Trash2 size={16} /></button></div>)}</div><Button variant="primary" size="lg" disabled={logging || items.length === 0 || items.some((item) => item.grams <= 0)} onClick={() => void logItems()}><Sparkles size={18} /> {logging ? 'Adding...' : `Add ${items.length} item${items.length === 1 ? '' : 's'} to log`}</Button><Button variant="secondary" onClick={() => setItems([])}>Start over</Button></div>}
+    {items.length > 0 && <div className="flex flex-col gap-3"><div className="text-sm text-muted">Review the portions before adding them.</div><div className="divide-y divide-border rounded-xl bg-surface-2 px-3">{items.map((item) => <div key={item.key} className="flex items-center gap-2 py-2"><div className="min-w-0 flex-1"><div className="flex items-center gap-1.5"><FoodName item={item.food} className="truncate text-sm font-medium" /><SourceBadge source={item.food.source} /></div><div className="text-xs text-muted">{item.grounded ? 'Matched to food data' : `${Math.round(item.estimate.confidence * 100)}% confidence`} · {fmtKcal(item.food.per100.kcal * item.grams / 100)} kcal</div></div><NumberInput aria-label={`${item.food.name} amount`} value={item.grams} onValue={(grams) => setItems((current) => current.map((currentItem) => currentItem.key === item.key ? { ...currentItem, grams: grams ?? 0 } : currentItem))} suffix="g" className="w-28" /><button type="button" aria-label={`Remove ${item.food.name}`} onClick={() => setItems((current) => current.filter((currentItem) => currentItem.key !== item.key))} className="rounded-lg p-2 text-muted hover:bg-surface"><Trash2 size={16} /></button></div>)}</div><Button variant="primary" size="lg" disabled={logging || items.length === 0 || items.some((item) => item.grams <= 0)} onClick={() => void logItems()}><Sparkles size={18} /> {logging ? 'Adding...' : `Add ${items.length} item${items.length === 1 ? '' : 's'} to log`}</Button>{asRecipe ? (
+      <div className="rounded-xl border border-border p-3">
+        <div className="mb-2 font-medium">Save as recipe</div>
+        <SaveAsRecipeForm
+          defaultName={description.trim().slice(0, 60) || 'Meal prep'}
+          ingredientGrams={items.reduce((total, item) => total + item.grams, 0)}
+          totalKcal={items.reduce((total, item) => total + item.food.per100.kcal * item.grams / 100, 0)}
+          submitLabel={(portions) => (portions > 0 ? `Save recipe and log ${portions} serving${portions === 1 ? '' : 's'}` : 'Save recipe')}
+          onSubmit={async ({ name, servings, yieldGrams, portions }) => {
+            const recipe = await createRecipe({ name, servings, yieldGrams, ingredients: items.filter((item) => item.grams > 0).map((item) => ({ food: item.food, grams: item.grams })) });
+            if (portions > 0) await logRecipeServings(recipe, date, meal, portions);
+            onLogged();
+          }}
+        />
+      </div>
+    ) : (
+      <Button variant="secondary" onClick={() => setAsRecipe(true)}><BookmarkPlus size={18} /> Meal prep? Save as recipe</Button>
+    )}<Button variant="secondary" onClick={() => { setItems([]); setAsRecipe(false); }}>Start over</Button></div>}
     {status && <div role="status" className="text-sm text-muted">{status}</div>}
   </div>;
 }

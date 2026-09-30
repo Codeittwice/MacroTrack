@@ -177,3 +177,18 @@ export function loadNevoHeader(): Promise<NevoFile['header'] | undefined> {
     .catch(() => { headerPromise = null; return undefined; });
   return headerPromise;
 }
+
+let namesPromise: Promise<Map<string, string>> | null = null;
+
+/**
+ * English NEVO names keyed by food id (`nevo:<code>`), for entries logged before names were
+ * snapshotted. Reads the dataset without building the search index, so the food log stays fast.
+ */
+export function loadNevoEnglishNames(): Promise<Map<string, string>> {
+  if (rows.length) return Promise.resolve(new Map(rows.filter((r) => r[2]).map((r) => [`nevo:${r[0]}`, r[2]])));
+  namesPromise ??= fetch(`${import.meta.env.BASE_URL ?? '/'}data/nevo.json`.replace(/([^:])\/\//g, '$1/'))
+    .then((r) => (r.ok ? (r.json() as Promise<NevoFile>) : undefined))
+    .then((f) => new Map((f?.rows ?? []).filter((r) => r[2]).map((r) => [`nevo:${r[0]}`, r[2]])))
+    .catch(() => { namesPromise = null; return new Map<string, string>(); });
+  return namesPromise;
+}

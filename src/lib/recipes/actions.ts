@@ -2,7 +2,8 @@
 import { db } from '@/db/schema';
 import { alive, newRecord } from '@/db/repo';
 import type { DateKey, FoodItem, LogEntry, Recipe, SavedMeal } from '@/db/types';
-import { addLogEntry } from '@/lib/log/actions';
+import { addLogEntry, deleteLogEntry } from '@/lib/log/actions';
+import { recipeToFoodItem } from '@/lib/food-sources/user';
 
 export interface RecipeIngredient {
   food: FoodItem;
@@ -92,7 +93,7 @@ function logEntryToFood(entry: LogEntry): FoodItem {
   const per100 = entry.per100 ?? (entry.grams > 0
     ? { kcal: (entry.nutrients.kcal * 100) / entry.grams, protein: (entry.nutrients.protein * 100) / entry.grams, carbs: (entry.nutrients.carbs * 100) / entry.grams, fat: (entry.nutrients.fat * 100) / entry.grams }
     : { kcal: 0, protein: 0, carbs: 0, fat: 0 });
-  return { id: entry.foodId, source: entry.source, name: entry.name, brand: entry.brand, per100, servings: [], unit: 'g' };
+  return { id: entry.foodId, source: entry.source, name: entry.name, nameEn: entry.nameEn, brand: entry.brand, per100, servings: [], unit: 'g' };
 }
 
 /** Save a meal's logged snapshots for future offline reuse. */
@@ -104,4 +105,37 @@ export async function saveLogEntriesAsMeal(name: string, entries: LogEntry[]): P
 export async function logSavedMeal(savedMeal: SavedMeal, date: DateKey, meal: number): Promise<LogEntry[]> {
   if (!alive(savedMeal)) throw new Error(`saved meal ${savedMeal.id} not found`);
   return Promise.all(savedMeal.items.map((item) => addLogEntry({ date, meal, food: item.food, grams: item.grams })));
+}
+
+/** Log `portions` servings of a recipe as one entry (e.g. "1 serving" of a four-portion meal prep). */
+export async function logRecipeServings(recipe: Recipe, date: DateKey, meal: number, portions = 1): Promise<LogEntry> {
+  if (!validAmount(portions)) throw new Error('portions must be a finite number > 0');
+  const food = recipeToFoodItem(recipe);
+  const perServing = food.servings[0].grams;
+  return addLogEntry({ date, meal, food, grams: perServing * portions, servingLabel: portions === 1 ? '1 serving' : `${portions} servings` });
+}
+
+export interface SaveAsRecipeOptions {
+  name: string;
+  servings: number;
+  /** Total cooked weight; defaults to the ingredients' weight. */
+  yieldGrams?: number;
+}
+
+/**
+ * Turn logged entries (e.g. a whole meal prep described to the AI) into a recipe. With `replace`,
+ * the entries are removed and `replace.portions` servings of the new recipe are logged in their place.
+ */
+export async function saveLogEntriesAsRecipe(
+  entries: LogEntry[],
+  opts: SaveAsRecipeOptions,
+  replace?: { date: DateKey; meal: number; portions: number },
+): Promise<Recipe> {
+  const ingredients = entries.filter((e) => e.grams > 0).map((entry) => ({ food: logEntryToFood(entry), grams: entry.grams }));
+  const recipe = await createRecipe({ name: opts.name, ingredients, servings: opts.servings, yieldGrams: opts.yieldGrams ?? ingredients.reduce((t, i) => t + i.grams, 0) });
+  if (replace) {
+    await Promise.all(entries.map((e) => deleteLogEntry(e.id)));
+    if (replace.portions > 0) await logRecipeServings(recipe, replace.date, replace.meal, replace.portions);
+  }
+  return recipe;
 }

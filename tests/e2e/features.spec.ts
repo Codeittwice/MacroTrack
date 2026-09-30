@@ -296,3 +296,69 @@ test('translates a Bulgarian meal description to English before estimating', asy
   await expect(dialog.getByLabel('Meal description')).toHaveValue('two slices of bread with kashkaval cheese');
   await expect(dialog.getByText('Translated from Bulgarian: две филийки хляб с кашкавал')).toBeVisible();
 });
+
+test('saves a described meal prep as a recipe and logs one serving, with English and Dutch names', async ({ page }) => {
+  await seed(page, 2);
+  await page.evaluate(async () => {
+    const load = (p: string) => import(/* @vite-ignore */ p);
+    const { updateSettings } = await load('/src/db/repo.ts');
+    await updateSettings({ aiProvider: 'claude', apiKeys: { claude: 'test-key' } });
+  });
+  await page.route('**/openfoodfacts.org/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"products":[]}' }));
+  const estimate = { items: [
+    { name: 'Boiled white rice', grams: 800, nutrients: { kcal: 1040, protein: 22, carbs: 224, fat: 2 }, confidence: 0.8, foodQuery: 'Rijst witte gekookt' },
+    { name: 'Chicken breast', grams: 400, nutrients: { kcal: 600, protein: 120, carbs: 0, fat: 12 }, confidence: 0.8, foodQuery: 'Kipfilet bereid' },
+  ] };
+  await page.route('https://api.anthropic.com/**', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ content: [{ type: 'text', text: JSON.stringify(estimate) }] }),
+  }));
+  await page.goto('/log?add=2&tab=ai');
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Meal description').fill('meal prep: 800 g rice and 400 g chicken');
+  await dialog.getByRole('button', { name: 'Estimate meal' }).click();
+  await expect(dialog.getByText('Rice white boiled')).toBeVisible();
+  await expect(dialog.getByText('Rijst witte gekookt')).toBeVisible(); // Dutch name underneath
+
+  await dialog.getByRole('button', { name: 'Meal prep? Save as recipe' }).click();
+  await dialog.getByLabel('Recipe name').fill('Chicken rice prep');
+  await dialog.getByLabel('Servings in total').fill('4');
+  await dialog.getByRole('button', { name: 'Save recipe and log 1 serving' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Edit Chicken rice prep' })).toBeVisible();
+  await expect(page.getByText('1 serving')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Edit Rijst witte gekookt' })).toBeHidden();
+});
+
+test('turns an already logged meal prep into a recipe from the meal menu', async ({ page }) => {
+  await seed(page, 2);
+  await page.evaluate(async () => {
+    const load = (p: string) => import(/* @vite-ignore */ p);
+    const { addLogEntry } = await load('/src/lib/log/actions.ts');
+    const { toDateKey } = await load('/src/lib/utils/date.ts');
+    const food = (id: string, name: string, nameEn: string, kcal: number) => ({ id, source: 'nevo', name, nameEn, per100: { kcal, protein: 10, carbs: 10, fat: 1 }, servings: [] });
+    await addLogEntry({ date: toDateKey(), meal: 2, food: food('nevo:658', 'Rijst witte gekookt', 'Rice white boiled', 130), grams: 800 });
+    await addLogEntry({ date: toDateKey(), meal: 2, food: food('nevo:1392', 'Kipfilet bereid', 'Chicken fillet prepared', 150), grams: 400 });
+  });
+  await page.goto('/log');
+  await expect(page.getByText('Chicken fillet prepared')).toBeVisible();
+  await page.getByRole('button', { name: 'Dinner options' }).click();
+  await page.getByRole('menuitem', { name: 'Save as recipe' }).click();
+  const sheet = page.getByRole('dialog');
+  await sheet.getByLabel('Recipe name').fill('Batch');
+  await sheet.getByLabel('Servings in total').fill('4');
+  await expect(sheet.getByText('1 serving ≈ 300 g')).toBeVisible();
+  await sheet.getByRole('button', { name: 'Save and keep 1 serving in the log' }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Edit Batch' })).toBeVisible();
+  await expect(page.getByText('Chicken fillet prepared')).toBeHidden();
+
+  await page.goto('/settings');
+  const names = page.getByRole('group', { name: 'Food names' });
+  await names.getByRole('button', { name: 'Nederlands' }).click();
+  await expect(names.getByRole('button', { name: 'Nederlands' })).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/recipes');
+  await page.getByRole('button', { name: 'Edit Batch' }).click();
+  await expect(page.getByRole('dialog').getByText('Kipfilet bereid')).toBeVisible();
+  await expect(page.getByRole('dialog').getByText('Chicken fillet prepared')).toBeHidden();
+});

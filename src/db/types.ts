@@ -107,6 +107,8 @@ export interface Settings {
   exerciseCalories: 'off' | 'half' | 'full';
   /** Open Food Facts country for branded products: Netherlands, Bulgaria, or both. */
   productRegion: 'nl' | 'bg' | 'both';
+  /** How food names are shown: English, Dutch (as published), or English with the Dutch name underneath. */
+  foodNames: 'en' | 'nl' | 'both';
   /** Speech recognition language for describing meals by voice ('auto' = device language). */
   voiceLanguage: 'auto' | 'en-US' | 'nl-NL' | 'bg-BG';
   /** Notification on the profile's weekly check-in day. */
@@ -152,6 +154,8 @@ export interface LogEntry extends Syncable {
   /** FoodItem.id (may no longer resolve) */
   foodId: string;
   name: string;
+  /** English name snapshot when the food has one (NEVO and some Open Food Facts products). */
+  nameEn?: string;
   brand?: string;
   source: FoodSourceId;
   grams: number;
