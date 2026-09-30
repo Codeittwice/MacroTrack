@@ -12,6 +12,7 @@ import { createBatch, logFromBatch } from '@/lib/batches/actions';
 import { uuid } from '@/lib/utils/id';
 import { fmtG, fmtKcal } from './format';
 import { FoodName } from '@/components/FoodName';
+import { loadNevo } from '@/lib/food-sources/nevo';
 
 type ReviewItem = GroundedEstimateItem & { key: string; grams: number };
 type Step = 'idle' | 'thinking' | 'matching' | 'done';
@@ -105,6 +106,10 @@ export function AiEstimateTab({ date, meal, onLogged, mode = 'describe' }: { dat
   const [eatNow, setEatNow] = useState<number | undefined>(1);
   const voice = speechMethod(settings.aiProvider, apiKey);
   const isBatch = (portions ?? 1) > 1;
+
+  // Matching the estimate needs the NEVO index, which takes a few seconds to build the first time;
+  // start it while the user is still typing or taking the photo.
+  useEffect(() => { void loadNevo().catch(() => undefined); }, []);
 
   // Closing the sheet while listening must release the microphone.
   const sessionRef = useRef<SpeechSession | null>(null);

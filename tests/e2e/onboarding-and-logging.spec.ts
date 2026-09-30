@@ -30,7 +30,7 @@ test('onboards a new user, logs a quick meal, and updates the dashboard', async 
   await completeOnboarding(page);
 
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('button', { name: /kcal consumed/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /kcal eaten/ })).toBeVisible();
 
   await page.getByRole('link', { name: 'Food log' }).click();
   await page.getByRole('button', { name: 'Add food' }).first().click();
@@ -46,7 +46,7 @@ test('onboards a new user, logs a quick meal, and updates the dashboard', async 
   await expect(page.getByText('400 kcal').first()).toBeVisible();
 
   await page.getByRole('link', { name: 'Dashboard' }).click();
-  await expect(page.getByRole('button', { name: /400 of .* kcal consumed/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^400 of .* kcal eaten/ })).toBeVisible();
 });
 
 test('exports and restores a backup through the UI', async ({ page }) => {

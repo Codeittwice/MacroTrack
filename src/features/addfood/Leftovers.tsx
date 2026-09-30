@@ -10,7 +10,7 @@ function LeftoverRow({ status, date, meal, onLogged }: { status: BatchStatus; da
   const [unit, setUnit] = useState<'portions' | 'grams'>('portions');
   const [amount, setAmount] = useState<number | undefined>(1);
   const [busy, setBusy] = useState(false);
-  const { batch, remainingGrams, remainingPortions, gramsPerPortion } = status;
+  const { batch, remainingPortions, gramsPerPortion } = status;
   // Tapping takes one portion, or whatever is left when less than one remains.
   const onePortion = Math.min(1, remainingPortions);
 
@@ -29,7 +29,7 @@ function LeftoverRow({ status, date, meal, onLogged }: { status: BatchStatus; da
       <div className="flex items-center gap-2">
         <button type="button" disabled={busy} onClick={() => void log({ portions: onePortion })} aria-label={`Log ${fmtPortions(onePortion)} portion of ${batch.name}`} className="min-w-0 flex-1 text-left disabled:opacity-50">
           <div className="truncate font-medium">{batch.name}</div>
-          <div className="text-xs text-muted">{fmtPortions(remainingPortions)} of {fmtPortions(batch.portions)} portions left · {fmtG(remainingGrams)} g · 1 portion ≈ {fmtG(gramsPerPortion)} g</div>
+          <div className="text-xs text-muted">{fmtPortions(remainingPortions)} of {fmtPortions(batch.portions)} portions left · {fmtG(gramsPerPortion)} g each</div>
         </button>
         <button type="button" aria-label={`Choose amount of ${batch.name}`} aria-expanded={custom} onClick={() => setCustom((v) => !v)} className="rounded-lg p-2 text-muted hover:bg-surface"><SlidersHorizontal size={16} /></button>
       </div>

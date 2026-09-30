@@ -71,7 +71,11 @@ Plan:
   - Android: the permission prompt and recognition on the emulator (host mic)
 
 ## Wave 9 (2026-09-30, Claude): user feedback round, 16 items
-Plan: `C:\Users\20243446\.claude\plans\so-now-for-new-velvety-summit.md`. Waves A, B, D and E are done; **Wave C (dashboard and food-log redesign) waits for the user to approve the mockups**. The More tab from Wave C is done. Not committed yet.
+Plan: `C:\Users\20243446\.claude\plans\so-now-for-new-velvety-summit.md`. All waves A–E are done and pushed. **Next: Wave F** (the extras the user approved: weekly review screen, progressive-overload hints and deloads, protein per meal and per kg, fibre and micronutrient targets, grocery list, Android widget). Sync is not wanted for now.
+- **Dashboard redesign (approved mockup):** `HeroCard` (kcal left as the headline, a small % ring, one row of macro bars), round `QuickActions`, leftovers, `GlanceTiles` (weight / training / water), compact `TodayMeals` with a + per empty meal, `Insights` (expenditure, 7-day average, goal date) and the streak as a header chip. `StatTiles`, `WeightCard`, `TrainingTile` and `MacroRing` were removed.
+- **Food-log counter:** eaten / target / left, one calorie bar, and thin macro bars with "P 95 / 153 g" underneath (`DaySummary`).
+- The AI tab warms up `loadNevo()` on mount: the first index build could take >5 s and made the estimate look stuck.
+- The user's voice bug ("a whole recipe gave 3 words") matches the stop-at-first-pause cause that was fixed.
 - **Back button (Android):** `src/app/backStack.ts` + `@capacitor/app`. `Sheet` registers itself; back closes the top sheet, otherwise `history.back()`, and on `/` a second press within 2 s exits. Unit tested, **not yet tried on a device**.
 - **Photo tab** in Add food (`AiEstimateTab mode="photo"`), a Photo quick action on the dashboard, and step-by-step progress while estimating.
 - **Barcode indicator:** scan frame with a sweeping line, then primary once a code is read (with vibration), green "Found: …", or a clear "not in the database" message.

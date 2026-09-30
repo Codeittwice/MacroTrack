@@ -59,23 +59,6 @@ export function useDashboardData() {
     return projectGoalDate(trend.latestTrendKg, profile.goalWeightKg, trend.weeklyRateKg, today);
   }, [profile, trend, today]);
 
-  const sparkline = useMemo(() => {
-    if (!trend) return undefined;
-    return trend.trend.slice(-30);
-  }, [trend]);
-
-  const weekAgoDelta = useMemo(() => {
-    if (!trend || trend.trend.length === 0) return undefined;
-    const last = trend.trend[trend.trend.length - 1];
-    const targetDate = addDays(last.date, -7);
-    let ref = trend.trend[0];
-    for (const p of trend.trend) {
-      if (p.date <= targetDate) ref = p;
-      else break;
-    }
-    return last.value - ref.value;
-  }, [trend]);
-
   return {
     today,
     profile,
@@ -91,8 +74,6 @@ export function useDashboardData() {
     weeklyAverage,
     weeklyAdherence,
     goalEta,
-    sparkline,
-    weekAgoDelta,
     hasCheckInToday,
   };
 }

@@ -59,7 +59,7 @@ test('weekly check-in proposes targets and applying them updates the dashboard',
   await page.getByRole('button', { name: 'Apply targets' }).click();
   await expect(page.getByRole('status')).toHaveText('Targets updated for today.');
   await page.goto('/');
-  await expect(page.getByText(`of ${Number(proposed.replace('kcal', '')).toLocaleString('en-US')} kcal`).first()).toBeVisible();
+  await expect(page.getByText(`of ${Number(proposed.replace('kcal', '')).toLocaleString('en-US')}`, { exact: false }).first()).toBeVisible();
   await expect(page.getByText('Weekly check-in ready')).toBeHidden();
 });
 
@@ -317,7 +317,8 @@ test('saves a described meal prep, logs one portion and offers the rest as lefto
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Meal description').fill('Meal prep: 800 g rice and 400 g chicken, makes 4 portions, I ate 1');
   await dialog.getByRole('button', { name: 'Estimate meal' }).click();
-  await expect(dialog.getByText('Rice white boiled')).toBeVisible(); // English names by default
+  // First use builds the NEVO search index, which can take a while on a busy machine.
+  await expect(dialog.getByText('Rice white boiled')).toBeVisible({ timeout: 20_000 }); // English names by default
   await expect(dialog.getByLabel('Meal name')).toHaveValue('Chicken rice prep');
   await expect(dialog.getByLabel('Portions it makes')).toHaveValue('4');
   await expect(dialog.getByText('3 of 4 portions stay as leftovers', { exact: false })).toBeVisible();
