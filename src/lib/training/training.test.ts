@@ -187,3 +187,13 @@ describe('past workouts', () => {
     expect(moved.date).toBe(target); // future dates are ignored
   });
 });
+
+describe('shins', () => {
+  it('has tibialis raises that count toward the shins, not the calves', () => {
+    const w: Workout = { ...workout('2026-09-30', 1, [{ kg: 0, reps: 20 }, { kg: 0, reps: 20 }], 'wall-tibialis-raise') };
+    const byMuscle = setsByMuscle([w], lookup);
+    expect(byMuscle.shins?.sets).toBe(2);
+    expect(byMuscle.calves).toBeUndefined();
+    expect(BUILT_IN_EXERCISES.filter((e) => e.primary.includes('shins')).length).toBeGreaterThanOrEqual(4);
+  });
+});

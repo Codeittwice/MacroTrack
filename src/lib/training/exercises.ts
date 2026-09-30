@@ -156,6 +156,13 @@ const ROWS: Row[] = [
   ['cable-pull-through', 'Cable pull-through', 'Kabel pull-through', 'cable', ['glutes', 'hamstrings'], ['lowerBack']],
   ['db-calf-raise', 'Dumbbell calf raise', 'Kuitheffen dumbbell', 'dumbbell', ['calves'], []],
   ['single-leg-calf-raise', 'Single-leg calf raise', 'Eenbenig kuitheffen', 'bodyweight', ['calves'], [], 'bodyweight'],
+  // Shins (tibialis anterior): pulling the toes up, the opposite of a calf raise.
+  ['wall-tibialis-raise', 'Wall tibialis raise', 'Tibialis raise tegen de muur', 'bodyweight', ['shins'], [], 'bodyweight'],
+  ['tib-bar-raise', 'Tib bar raise', 'Tib bar raise', 'other', ['shins'], []],
+  ['seated-db-tibialis-raise', 'Seated dumbbell tibialis raise', 'Zittende tibialis raise met dumbbell', 'dumbbell', ['shins'], []],
+  ['machine-tibialis-raise', 'Tibialis raise machine', 'Tibialis machine', 'machine', ['shins'], []],
+  ['band-dorsiflexion', 'Banded dorsiflexion', 'Dorsaalflexie met band', 'band', ['shins'], []],
+  ['heel-walk', 'Heel walk', 'Op de hakken lopen', 'bodyweight', ['shins'], ['calves'], 'bodyweight'],
   ['sled-push', 'Sled push', 'Slee duwen', 'other', ['quads', 'glutes'], ['calves', 'frontDelts', 'triceps']],
   // Core
   ['plank', 'Plank', 'Plank', 'bodyweight', ['abs'], ['obliques'], 'bodyweight'],
@@ -263,10 +270,10 @@ export function builtInExercise(id: string): ExerciseDef | undefined {
   return BY_ID.get(id);
 }
 
-export const MUSCLES: Muscle[] = ['chest', 'frontDelts', 'sideDelts', 'rearDelts', 'biceps', 'triceps', 'forearms', 'lats', 'upperBack', 'traps', 'lowerBack', 'abs', 'obliques', 'glutes', 'quads', 'hamstrings', 'adductors', 'calves'];
+export const MUSCLES: Muscle[] = ['chest', 'frontDelts', 'sideDelts', 'rearDelts', 'biceps', 'triceps', 'forearms', 'lats', 'upperBack', 'traps', 'lowerBack', 'abs', 'obliques', 'glutes', 'quads', 'hamstrings', 'adductors', 'calves', 'shins'];
 
 export const MUSCLE_LABEL: Record<Muscle, string> = {
   chest: 'Chest', frontDelts: 'Front delts', sideDelts: 'Side delts', rearDelts: 'Rear delts', biceps: 'Biceps', triceps: 'Triceps',
   forearms: 'Forearms', lats: 'Lats', upperBack: 'Upper back', traps: 'Traps', lowerBack: 'Lower back', abs: 'Abs', obliques: 'Obliques',
-  glutes: 'Glutes', quads: 'Quads', hamstrings: 'Hamstrings', adductors: 'Adductors', calves: 'Calves',
+  glutes: 'Glutes', quads: 'Quads', hamstrings: 'Hamstrings', adductors: 'Adductors', calves: 'Calves', shins: 'Shins (tibialis)',
 };

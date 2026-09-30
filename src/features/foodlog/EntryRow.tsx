@@ -1,6 +1,7 @@
 import { SourceBadge } from '@/components/ui';
 import type { LogEntry } from '@/db/types';
 import { fmtAmount, fmtG, fmtKcal } from './format';
+import { FoodName } from '@/components/FoodName';
 
 export function EntryRow({ entry, onClick }: { entry: LogEntry; onClick: () => void }) {
   return (
@@ -12,7 +13,7 @@ export function EntryRow({ entry, onClick }: { entry: LogEntry; onClick: () => v
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="truncate font-medium">{entry.name}</span>
+          <FoodName item={entry} />
           <SourceBadge source={entry.source} />
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted">
