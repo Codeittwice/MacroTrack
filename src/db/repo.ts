@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS: Settings = {
   logReminderTime: '21:00',
   exerciseCalories: 'off',
   productRegion: 'nl',
+  foodNames: 'both',
   voiceLanguage: 'auto',
   checkInReminderEnabled: false,
   checkInReminderTime: '09:00',

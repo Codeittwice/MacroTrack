@@ -79,7 +79,7 @@ export async function groundEstimate(
       const candidates = await search(query);
       const best = candidates
         .filter((candidate) => candidate.source === 'nevo' || candidate.source === 'off')
-        .map((candidate) => ({ candidate, score: nameMatchScore(query, candidate.name) }))
+        .map((candidate) => ({ candidate, score: Math.max(nameMatchScore(query, candidate.name), candidate.nameEn ? nameMatchScore(query, candidate.nameEn) : 0) }))
         .sort((a, b) => b.score - a.score)[0];
       if (best && best.score >= 0.8) return { estimate: item, food: best.candidate, grounded: true };
     } catch {

@@ -55,10 +55,9 @@ const FRONT: Partial<Record<Muscle, string[]>> = {
     ...pair([[94, 282], [89, 300], [91, 316], [97, 314], [98, 294]]),
   ],
   adductors: pair([[97, 236], [93, 244], [92, 270], [96, 282], [99, 258]]),
-  calves: [
-    ...pair([[75, 330], [69, 350], [70, 390], [78, 412], [84, 386], [83, 346]]),
-    ...pair([[92, 334], [88, 352], [89, 380], [94, 372], [96, 348]]),
-  ],
+  // The outer front of the lower leg is the tibialis anterior; the inner shape is the calf seen from the front.
+  shins: pair([[75, 330], [69, 350], [70, 390], [78, 412], [84, 386], [83, 346]]),
+  calves: pair([[92, 334], [88, 352], [89, 380], [94, 372], [96, 348]]),
 };
 
 const BACK: Partial<Record<Muscle, string[]>> = {

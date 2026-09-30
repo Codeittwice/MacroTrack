@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '@/db/schema';
 import type { FoodItem } from '@/db/types';
-import { createRecipe, createSavedMeal, deleteRecipe, deleteSavedMeal, logSavedMeal, saveLogEntriesAsMeal, updateRecipe, updateSavedMeal } from './actions';
+import { createRecipe, createSavedMeal, deleteRecipe, deleteSavedMeal, logRecipeServings, logSavedMeal, saveLogEntriesAsMeal, saveLogEntriesAsRecipe, updateRecipe, updateSavedMeal } from './actions';
+import { alive } from '@/db/repo';
 import { addLogEntry } from '@/lib/log/actions';
 
 const FOOD: FoodItem = {
@@ -51,5 +52,39 @@ describe('saved meals', () => {
     expect(copies).toHaveLength(1);
     expect(copies[0]).toMatchObject({ date: '2026-09-25', meal: 2, grams: 150, name: 'Test food' });
     expect(copies[0].nutrients.kcal).toBeCloseTo(150, 5);
+  });
+});
+
+describe('meal prep as recipe', () => {
+  const RICE: FoodItem = { id: 'nevo:rice', source: 'nevo', name: 'Rijst witte gekookt', nameEn: 'Rice white boiled', per100: { kcal: 130, protein: 3, carbs: 28, fat: 0 }, servings: [] };
+  const CHICKEN: FoodItem = { id: 'nevo:chicken', source: 'nevo', name: 'Kipfilet bereid', nameEn: 'Chicken fillet prepared', per100: { kcal: 150, protein: 30, carbs: 0, fat: 3 }, servings: [] };
+
+  it('logs one serving of a recipe as a single entry', async () => {
+    const recipe = await createRecipe({ name: 'Prep', ingredients: [{ food: RICE, grams: 800 }, { food: CHICKEN, grams: 400 }], yieldGrams: 1200, servings: 4 });
+    const entry = await logRecipeServings(recipe, '2026-09-30', 1);
+    expect(entry.grams).toBe(300);
+    expect(entry.servingLabel).toBe('1 serving');
+    expect(entry.nutrients.kcal).toBeCloseTo((800 * 1.3 + 400 * 1.5) / 4);
+  });
+
+  it('turns a logged meal prep into a recipe and keeps only the servings eaten', async () => {
+    const a = await addLogEntry({ date: '2026-09-30', meal: 2, food: RICE, grams: 800 });
+    const b = await addLogEntry({ date: '2026-09-30', meal: 2, food: CHICKEN, grams: 400 });
+    expect(a.nameEn).toBe('Rice white boiled'); // English name is snapshotted
+    const recipe = await saveLogEntriesAsRecipe([a, b], { name: 'Chicken rice prep', servings: 4 }, { date: '2026-09-30', meal: 2, portions: 1 });
+    expect(recipe).toMatchObject({ name: 'Chicken rice prep', servings: 4, yieldGrams: 1200 });
+    expect(recipe.ingredients[0].food.nameEn).toBe('Rice white boiled');
+    const left = (await db.logEntries.toArray()).filter(alive);
+    expect(left).toHaveLength(1);
+    expect(left[0]).toMatchObject({ name: 'Chicken rice prep', source: 'recipe', grams: 300, servingLabel: '1 serving' });
+    expect(left[0].nutrients.kcal).toBeCloseTo((1040 + 600) / 4);
+  });
+
+  it('can save without touching the log, or remove it entirely', async () => {
+    const a = await addLogEntry({ date: '2026-09-30', meal: 0, food: RICE, grams: 400 });
+    await saveLogEntriesAsRecipe([a], { name: 'Rice batch', servings: 2 });
+    expect((await db.logEntries.toArray()).filter(alive)).toHaveLength(1);
+    await saveLogEntriesAsRecipe([a], { name: 'Rice batch 2', servings: 2 }, { date: '2026-09-30', meal: 0, portions: 0 });
+    expect((await db.logEntries.toArray()).filter(alive)).toHaveLength(0);
   });
 });

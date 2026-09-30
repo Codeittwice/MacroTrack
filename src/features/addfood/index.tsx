@@ -20,6 +20,7 @@ import { BarcodeTab } from './BarcodeTab';
 import { AiEstimateTab } from './AiEstimateTab';
 import { readNutritionLabel, type LabelReading } from '@/lib/ai';
 import { prepareMealPhoto } from './mealPhoto';
+import { FoodName } from '@/components/FoodName';
 
 type BuiltInTab = 'search' | 'library' | 'barcode' | 'ai' | 'quick' | 'new';
 type SheetTab = BuiltInTab | string;
@@ -45,7 +46,7 @@ function FoodRow({ food, onSelect }: { food: FoodItem; onSelect: (food: FoodItem
     <div className="flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-surface-2">
       <button type="button" onClick={() => onSelect(food)} className="min-w-0 flex-1 text-left">
         <div className="flex items-center gap-1.5">
-          <span className="truncate font-medium">{food.name}</span>
+          <FoodName item={food} />
           <SourceBadge source={food.source} />
         </div>
         <div className="mt-0.5 truncate text-xs text-muted">
@@ -103,7 +104,7 @@ function FoodAmount({ food, date, meal, onBack, onLogged }: {
       <div>
         <button type="button" onClick={onBack} className="mb-2 text-sm text-muted hover:text-text">Back to food list</button>
         <div className="flex items-center gap-2">
-          <h3 className="min-w-0 truncate text-lg font-semibold">{food.name}</h3>
+          <FoodName item={food} as="h3" className="min-w-0 truncate text-lg font-semibold" />
           <SourceBadge source={food.source} />
         </div>
         {food.brand && <div className="text-sm text-muted">{food.brand}</div>}
@@ -428,7 +429,7 @@ export function FoodDetailSheet({ open, onClose, entry, date, meal, onDone }: {
     <Sheet open={open} onClose={onClose} title="Edit food">
       <div key={entry.id} className="flex flex-col gap-4">
         <div>
-          <div className="flex items-center gap-2"><h3 className="font-semibold">{entry.name}</h3><SourceBadge source={entry.source} /></div>
+          <div className="flex items-center gap-2"><FoodName item={entry} as="h3" className="font-semibold" /><SourceBadge source={entry.source} /></div>
           {entry.brand && <div className="text-sm text-muted">{entry.brand}</div>}
         </div>
         <div><Label>Amount</Label><NumberInput aria-label="Entry amount" value={grams} onValue={setGrams} suffix="g" autoFocus /></div>

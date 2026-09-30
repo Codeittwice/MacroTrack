@@ -14,6 +14,12 @@ describe('groundEstimate', () => {
     expect(item).toMatchObject({ grounded: true, food: { id: 'nevo:42' } });
   });
 
+  it('also matches on the English name', async () => {
+    const rice: FoodItem = { id: 'nevo:7', source: 'nevo', name: 'Rijst witte gekookt', nameEn: 'Rice white boiled', per100: { kcal: 130, protein: 3, carbs: 28, fat: 0 }, servings: [], unit: 'g' };
+    const [item] = await groundEstimate({ items: [{ name: 'Rice', foodQuery: 'Rice white boiled', grams: 200, nutrients: { kcal: 260, protein: 5, carbs: 56, fat: 1 }, confidence: 0.8 }] }, async () => [rice]);
+    expect(item).toMatchObject({ grounded: true, food: { id: 'nevo:7' } });
+  });
+
   it('keeps a clearly labelled AI estimate when no match is strong enough', async () => {
     const [item] = await groundEstimate({ items: [{ name: 'Grandmas mystery bowl', grams: 200, nutrients: { kcal: 400, protein: 20, carbs: 30, fat: 15 }, confidence: 0.3 }] }, async () => [COTTAGE_CHEESE]);
     expect(item.grounded).toBe(false);
